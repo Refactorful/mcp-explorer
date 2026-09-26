@@ -23,8 +23,9 @@ The distribution builds two artifacts:
   `2026-07-28` protocol era (no initialize handshake).
 - Discovers capabilities via `server/discover`, then loads `tools/list` and
   (when advertised) `prompts/list`.
-- **Tool viewer:** name/description, JSON-Schema inspector, a schema-driven
-  "Try it" form, a `Result`/`Raw`/`cURL` view.
+- **Tool viewer:** name/description, a collapsible JSON-Schema inspector
+  (collapsed by default), a schema-driven "Try it" form, a `Result`/`Raw`/`cURL`
+  view.
 - **Schema-driven form:** one typed control per input — `enum` becomes a
   `<select>` of valid options, `boolean` a checkbox, `integer`/`number` a
   validated numeric input, `string` a text input, nested objects recurse
@@ -35,8 +36,10 @@ The distribution builds two artifacts:
   value is coerced to the declared type so requests stay valid.
 - **Prompt viewer:** argument form with required-field enforcement, rendered
   messages, and a raw JSON view.
-- **Navigation:** selecting a tool or prompt pushes a history entry; the detail
-  view has a back button and the browser back/forward buttons work too.
+- **Navigation:** master–detail split view — the list stays pinned while the
+  selected tool/prompt renders beside it, the selection is reflected in history
+  so browser back/forward work, and narrow screens collapse to a single pane
+  with a back control.
 - Prompts tab is hidden when the server does not advertise the capability.
 - Execution is behind a toolbar toggle: **on in `vite dev`, off in production
   bundles**.

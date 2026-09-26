@@ -64,57 +64,52 @@ let make = (~initialEndpoint: string) => {
     let showPrompts = discover.capabilities.prompts
     let tabs = showPrompts ? ["Tools", "Prompts"] : ["Tools"]
     let version = discover.supportedVersions->Array.get(0)->Option.getOr("")
+    let isPrompts = activeTab == "Prompts" && showPrompts
+    let hasDetail = isPrompts ? selectedPrompt->Option.isSome : selectedTool->Option.isSome
 
-    let content = if activeTab == "Prompts" && showPrompts {
-      switch selectedPrompt {
-      | Some(name) =>
-        switch prompts->Array.find(prompt => prompt.name == name) {
-        | Some(prompt) =>
-          <PromptDetail
-            key={prompt.name}
-            prompt
-            endpoint
-            onBack={() => History.back()}
-          />
-        | None =>
-          <PromptList
-            prompts
-            selectedName=selectedPrompt
-            onSelect={name => navigate({tab: "Prompts", name: Some(name)})}
-          />
-        }
-      | None =>
-        <PromptList
-          prompts
-          selectedName=selectedPrompt
-          onSelect={name => navigate({tab: "Prompts", name: Some(name)})}
+    let emptyDetail = kind =>
+      <div className="empty-detail muted">
+        {("Select a " ++ kind ++ " from the list to inspect it.")->React.string}
+      </div>
+
+    let listView = if isPrompts {
+      <PromptList
+        prompts
+        selectedName=selectedPrompt
+        onSelect={name => navigate({tab: "Prompts", name: Some(name)})}
+      />
+    } else {
+      <ToolList
+        tools
+        selectedName=selectedTool
+        onSelect={name => navigate({tab: "Tools", name: Some(name)})}
+      />
+    }
+
+    let detailView = if isPrompts {
+      switch selectedPrompt->Option.flatMap(name =>
+        prompts->Array.find(prompt => prompt.name == name)
+      ) {
+      | Some(prompt) =>
+        <PromptDetail
+          key={prompt.name}
+          prompt
+          endpoint
+          onBack={() => History.back()}
         />
+      | None => emptyDetail("prompt")
       }
     } else {
-      switch selectedTool {
-      | Some(name) =>
-        switch tools->Array.find(tool => tool.name == name) {
-        | Some(tool) =>
-          <ToolDetail
-            key={tool.name}
-            tool
-            endpoint
-            execEnabled
-            onBack={() => History.back()}
-          />
-        | None =>
-          <ToolList
-            tools
-            selectedName=selectedTool
-            onSelect={name => navigate({tab: "Tools", name: Some(name)})}
-          />
-        }
-      | None =>
-        <ToolList
-          tools
-          selectedName=selectedTool
-          onSelect={name => navigate({tab: "Tools", name: Some(name)})}
+      switch selectedTool->Option.flatMap(name => tools->Array.find(tool => tool.name == name)) {
+      | Some(tool) =>
+        <ToolDetail
+          key={tool.name}
+          tool
+          endpoint
+          execEnabled
+          onBack={() => History.back()}
         />
+      | None => emptyDetail("tool")
       }
     }
 
@@ -129,7 +124,10 @@ let make = (~initialEndpoint: string) => {
           ? React.null
           : <span className="pill"> {("Protocol " ++ version)->React.string} </span>}
       </div>
-      {content}
+      <div className={hasDetail ? "split has-detail" : "split"}>
+        <aside className="split-list"> {listView} </aside>
+        <section className="split-detail"> {detailView} </section>
+      </div>
     </div>
   }
 

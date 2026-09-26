@@ -62,8 +62,8 @@ const waitFor = async (predicate, timeout = 2000) => {
   throw new Error("timed out waiting for condition");
 };
 
-describe("App navigation", () => {
-  test("selecting a tool opens the detail and back returns to the list", async () => {
+describe("App master-detail navigation", () => {
+  test("the list stays visible while a tool detail is open, and back clears it", async () => {
     const container = document.getElementById("host");
     const root = createRoot(container);
 
@@ -71,25 +71,31 @@ describe("App navigation", () => {
       root.render(React.createElement(App.make, { initialEndpoint: "/mcp" }));
     });
 
-    // List view is visible (after discovery + tools/list resolve).
+    // Both panes exist; the detail pane starts empty.
     await waitFor(() => container.querySelector(".item") !== null);
+    expect(container.querySelector(".split")).not.toBeNull();
+    expect(container.querySelector(".empty-detail")).not.toBeNull();
+    expect(container.querySelector(".detail-header")).toBeNull();
 
-    // Open the tool detail.
+    // Select a tool: detail renders, list is still there.
     await act(async () => {
       container
         .querySelector(".item")
         .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     });
-    await waitFor(() => container.querySelector(".back-btn") !== null);
+    await waitFor(() => container.querySelector(".detail-header") !== null);
     expect(container.querySelector(".detail-header h2").textContent).toBe("add");
+    expect(container.querySelector(".item-list")).not.toBeNull();
+    expect(container.querySelector(".empty-detail")).toBeNull();
 
-    // In-app back button returns to the list (via history.back -> popstate).
+    // Back (history.back -> popstate) clears the detail but keeps the list.
     await act(async () => {
       container
         .querySelector(".back-btn")
         .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     });
-    await waitFor(() => container.querySelector(".item-list") !== null);
-    expect(container.querySelector(".back-btn")).toBeNull();
+    await waitFor(() => container.querySelector(".empty-detail") !== null);
+    expect(container.querySelector(".item-list")).not.toBeNull();
+    expect(container.querySelector(".detail-header")).toBeNull();
   });
 });

@@ -35,7 +35,7 @@ body {
 }
 
 .app {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
 }
@@ -161,6 +161,63 @@ body {
   margin-bottom: 12px;
 }
 
+/* Master–detail split: list pinned on the left, detail on the right. */
+
+.split {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.split-list {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+}
+
+.split-detail {
+  min-width: 0;
+}
+
+.empty-detail {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 48px 20px;
+  text-align: center;
+}
+
+/* The detail pane is usually narrower than the page, so stack its columns. */
+.split-detail .detail-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1440px) {
+  .split-detail .detail-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .split.has-detail .split-list {
+    display: none;
+  }
+  .split:not(.has-detail) .split-detail {
+    display: none;
+  }
+  .split-list {
+    position: static;
+    max-height: none;
+  }
+  .split-detail .back-btn {
+    display: inline-flex;
+  }
+}
+
 .tabs,
 .subtabs {
   display: flex;
@@ -250,6 +307,7 @@ body {
 }
 
 .back-btn {
+  display: none;
   align-self: flex-start;
   padding: 4px 10px;
   font-size: 12px;
@@ -285,6 +343,52 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: var(--fg-muted);
+}
+
+/* Collapsible schema section (collapsed by default) */
+
+.disclosure {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  align-self: start;
+  overflow: hidden;
+}
+
+.disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-muted);
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure > summary::before {
+  content: "▸";
+  font-size: 10px;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.disclosure[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.disclosure > summary:hover {
+  color: var(--fg);
+}
+
+.disclosure-body {
+  padding: 0 12px 12px;
 }
 
 .code-block {

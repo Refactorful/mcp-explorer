@@ -76,16 +76,20 @@ let make = (~tool: Protocol.tool, ~endpoint: string, ~execEnabled: bool, ~onBack
       }}
     </div>
     <div className="detail-grid">
-      <section className="detail-col">
-        <h3> {"Input schema"->React.string} </h3>
-        <SchemaView schema={tool.inputSchema} />
-        {requiredFields->Array.length > 0
-          ? <p className="required-note">
-              {"Required: "->React.string}
-              {requiredFields->Array.join(", ")->React.string}
-            </p>
-          : React.null}
-      </section>
+      <details className="detail-col disclosure">
+        <summary>
+          <span className="disclosure-label"> {"Input schema"->React.string} </span>
+        </summary>
+        <div className="disclosure-body">
+          <SchemaView schema={tool.inputSchema} />
+          {requiredFields->Array.length > 0
+            ? <p className="required-note">
+                {"Required: "->React.string}
+                {requiredFields->Array.join(", ")->React.string}
+              </p>
+            : React.null}
+        </div>
+      </details>
       <section className="detail-col">
         <div className="tryit-head">
           <h3> {"Try it"->React.string} </h3>

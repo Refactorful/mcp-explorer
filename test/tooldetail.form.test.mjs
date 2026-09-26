@@ -43,6 +43,11 @@ describe("ToolDetail form", () => {
     );
     expect(patterns).toContain("-?[0-9]+(\\.[0-9]+)?");
     expect(container.textContent).toContain("the source unit");
+
+    // The raw schema is collapsed by default.
+    const disclosure = container.querySelector("details.disclosure");
+    expect(disclosure).not.toBeNull();
+    expect(disclosure.hasAttribute("open")).toBe(false);
   });
 
   test("the back button invokes onBack", async () => {
