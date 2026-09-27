@@ -104,6 +104,10 @@ body {
   line-height: 1.45;
 }
 
+.text-input {
+  max-width: 480px;
+}
+
 .json-editor.invalid {
   border-color: var(--danger);
 }
@@ -500,22 +504,54 @@ body {
 
 /* Schema-driven "Try it" form */
 
-.schema-form {
-  display: flex;
-  flex-direction: column;
+/* Fields flow into as many compact columns as fit, instead of each control
+   stretching across the whole detail pane. Containers and JSON editors span
+   the full width (see `.schema-field.object` / `.schema-field.json`). */
+.schema-form,
+.schema-nested,
+.variant-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   gap: 12px;
+  align-items: start;
+}
+
+.schema-form {
   margin-bottom: 4px;
+}
+
+/* Container controls that sit directly in a grid (root map/array/variant, a
+   composition branch body, or an object's extra-properties map) take the whole
+   row rather than a single column. */
+.schema-form > .schema-nested,
+.schema-form > .schema-map,
+.schema-form > .schema-array,
+.schema-form > .schema-variant,
+.variant-body > .schema-nested,
+.variant-body > .schema-map,
+.variant-body > .schema-array,
+.variant-body > .schema-variant,
+.schema-nested > .schema-map,
+.schema-nested > .schema-array,
+.schema-nested > .schema-variant {
+  grid-column: 1 / -1;
 }
 
 .schema-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .schema-field.object {
+  grid-column: 1 / -1;
   border-left: 2px solid var(--border);
   padding-left: 10px;
+}
+
+.schema-field.json {
+  grid-column: 1 / -1;
 }
 
 .schema-label {
@@ -539,9 +575,6 @@ body {
 }
 
 .schema-nested {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
   margin-top: 4px;
 }
 
@@ -621,15 +654,14 @@ body {
 }
 
 .variant-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  margin-top: 4px;
   border-left: 2px solid var(--border);
   padding-left: 10px;
 }
 
 .select-input {
   width: 100%;
+  max-width: 480px;
   background: var(--bg-input);
   color: var(--fg);
   border: 1px solid var(--border);

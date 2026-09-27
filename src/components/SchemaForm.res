@@ -354,12 +354,13 @@ and renderField = (
   let current = JsonValue.getField(parentValue, name)
   let setValue = (value: JSON.t) => onChange(JsonValue.setField(parentValue, name, value))
   let clearValue = () => onChange(JsonValue.removeField(parentValue, name))
-  let container = switch classify(resolved) {
-  | Object | Map(_) | Array(_) | Variant(_) => true
-  | Select(_) | Checkbox | Integer | Number | Text | Json => false
+  let className = switch classify(resolved) {
+  | Object | Map(_) | Array(_) | Variant(_) => "schema-field object"
+  | Json => "schema-field json"
+  | Select(_) | Checkbox | Integer | Number | Text => "schema-field"
   }
 
-  <div className={container ? "schema-field object" : "schema-field"} key={name}>
+  <div className={className} key={name}>
     {fieldLabel(name, required, description)}
     {renderControl(
       ~resolved,
