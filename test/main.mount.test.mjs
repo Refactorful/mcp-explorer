@@ -59,6 +59,8 @@ const waitFor = async (predicate, timeout = 2000) => {
 
 const execCheckbox = (container) => container.querySelector('input[type="checkbox"]');
 
+const endpointInput = (container) => container.querySelector(".text-input");
+
 const openTools = async (container) => {
   await waitFor(() => container.querySelector(".item") !== null);
   const item = container.querySelector(".item");
@@ -110,8 +112,8 @@ describe("global mount API", () => {
 
     const container = document.getElementById("mcp-explorer");
     await openTools(container);
-    expect(execCheckbox(container)).toBeNull();
     expect(container.querySelector("fieldset.tryit-fieldset").disabled).toBe(false);
+    expect(endpointInput(container).disabled).toBe(false);
   });
 
   test("execEnabled: false disables tool execution and explains why", async () => {
@@ -135,5 +137,27 @@ describe("global mount API", () => {
     const container = document.getElementById("mcp-explorer");
     await waitFor(() => container.querySelector(".config-bar") !== null);
     expect(execCheckbox(container)).toBeNull();
+  });
+
+  test("endpointEditable: false locks the endpoint field", async () => {
+    await import("../src/Main.res.mjs");
+    await act(async () => {
+      globalThis.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer", endpointEditable: false });
+    });
+
+    const container = document.getElementById("mcp-explorer");
+    await waitFor(() => endpointInput(container) !== null);
+    expect(endpointInput(container).disabled).toBe(true);
+  });
+
+  test("endpointEditable defaults to editable when omitted", async () => {
+    await import("../src/Main.res.mjs");
+    await act(async () => {
+      globalThis.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer" });
+    });
+
+    const container = document.getElementById("mcp-explorer");
+    await waitFor(() => endpointInput(container) !== null);
+    expect(endpointInput(container).disabled).toBe(false);
   });
 });

@@ -7,22 +7,35 @@
 const MCP_EXPLORER_VERSION = "mcpexplorer"
 
 """
-    mcpexplorerhtml(endpoint::String; execenabled::Union{Nothing,Bool}=nothing) :: HTTP.Response
+    mcpexplorerhtml(
+        endpoint::String;
+        execenabled::Union{Nothing,Bool}=nothing,
+        endpointeditable::Union{Nothing,Bool}=nothing,
+    ) :: HTTP.Response
 
 Return an HTML page that mounts the MCP explorer against `endpoint`.
 
 `execenabled` optionally turns tool execution on/off for this mount. When
 omitted the viewer's build-time default applies.
+
+`endpointeditable` optionally controls whether the endpoint field in the toolbar
+can be edited (default `true`).
 """
-function mcpexplorerhtml(endpoint::String; execenabled::Union{Nothing,Bool}=nothing) :: HTTP.Response
+function mcpexplorerhtml(
+    endpoint::String;
+    execenabled::Union{Nothing,Bool}=nothing,
+    endpointeditable::Union{Nothing,Bool}=nothing,
+) :: HTTP.Response
 
     # load static content files
     viewerjs = readstaticfile("$MCP_EXPLORER_VERSION/mcpexplorer.js")
     viewerstyles = readstaticfile("$MCP_EXPLORER_VERSION/mcpexplorer.css")
 
-    # Only emit `execEnabled` when the caller supplied it, so the viewer can fall
-    # back to its build-time default (on in dev, off in production) otherwise.
+    # Only emit each option when the caller supplied it, so the viewer can fall
+    # back to its own defaults otherwise.
     execoption = isnothing(execenabled) ? "" : ", execEnabled: $(execenabled)"
+    endpointoption =
+        isnothing(endpointeditable) ? "" : ", endpointEditable: $(endpointeditable)"
 
     html("""
         <!DOCTYPE html>
@@ -40,7 +53,7 @@ function mcpexplorerhtml(endpoint::String; execenabled::Union{Nothing,Bool}=noth
             <div id="mcp-explorer"></div>
             <script>$viewerjs</script>
             <script>
-                window.McpExplorer({ endpoint: "$endpoint", domId: "mcp-explorer"$execoption });
+                window.McpExplorer({ endpoint: "$endpoint", domId: "mcp-explorer"$execoption$endpointoption });
             </script>
         </body>
 
@@ -58,6 +71,11 @@ end
 #       () -> mcpexplorerhtml(join_url_path(ctx.service.prefix[], mcp_path)),
 #   )
 #
-# Pass `execenabled=false` to turn execution off for the page:
+# Pass `execenabled=false` to turn execution off, and `endpointeditable=false` to
+# lock the endpoint field:
 #
-#   () -> mcpexplorerhtml(join_url_path(ctx.service.prefix[], mcp_path); execenabled=false),
+#   () -> mcpexplorerhtml(
+#       join_url_path(ctx.service.prefix[], mcp_path);
+#       execenabled=false,
+#       endpointeditable=false,
+#   ),

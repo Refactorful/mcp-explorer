@@ -68,7 +68,13 @@ describe("App master-detail navigation", () => {
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(React.createElement(App.make, { initialEndpoint: "/mcp" }));
+      root.render(
+        React.createElement(App.make, {
+          initialEndpoint: "/mcp",
+          initialExecEnabled: undefined,
+          initialEndpointEditable: undefined,
+        }),
+      );
     });
 
     // Both panes exist; the detail pane starts empty.

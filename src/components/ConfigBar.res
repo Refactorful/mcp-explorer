@@ -1,5 +1,11 @@
 @react.component
-let make = (~endpoint: string, ~onEndpointChange: string => unit, ~onRefresh: unit => unit, ~loading: bool) =>
+let make = (
+  ~endpoint: string,
+  ~onEndpointChange: string => unit,
+  ~endpointLocked: bool,
+  ~onRefresh: unit => unit,
+  ~loading: bool,
+) =>
   <div className="config-bar">
     <label className="field grow">
       <span> {"MCP endpoint"->React.string} </span>
@@ -7,6 +13,8 @@ let make = (~endpoint: string, ~onEndpointChange: string => unit, ~onRefresh: un
         className="text-input"
         value=endpoint
         spellCheck=false
+        disabled=endpointLocked
+        title={endpointLocked ? "The endpoint is configured by the host" : ""}
         onChange={event => onEndpointChange(ReactEvent.Form.target(event)["value"])}
       />
     </label>

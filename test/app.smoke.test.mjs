@@ -5,7 +5,13 @@ import * as App from "../src/App.res.mjs";
 
 describe("App", () => {
   test("renders the toolbar and shell without throwing", () => {
-    const html = renderToString(React.createElement(App.make, { initialEndpoint: "/mcp" }));
+    const html = renderToString(
+      React.createElement(App.make, {
+        initialEndpoint: "/mcp",
+        initialExecEnabled: undefined,
+        initialEndpointEditable: undefined,
+      }),
+    );
     expect(html).toContain("MCP Explorer");
     expect(html).toContain("MCP endpoint");
     expect(html).not.toContain("Enable execution");

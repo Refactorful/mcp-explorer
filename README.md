@@ -54,6 +54,8 @@ The distribution builds two artifacts:
   toggle. It defaults to **on in `vite dev`, off in production bundles**, and a
   host can force it per mount with the `execEnabled` config option. When off, the
   tool "Try it" area is disabled and explains that execution is disabled.
+- The endpoint field can be locked with the `endpointEditable: false` config
+  option so the viewer stays pinned to one server.
 
 ## Global mount API (swagger-style)
 
@@ -65,7 +67,8 @@ handle:
 const viewer = window.McpExplorer({
   endpoint: "http://127.0.0.1:8080/mcp", // or a same-origin path like "/mcp"
   domId: "mcp-explorer",
-  execEnabled: true, // optional: force tool execution on/off for this mount
+  execEnabled: true, // optional: turn tool execution on/off for this mount
+  endpointEditable: false, // optional: lock the endpoint field (default true)
 });
 // viewer.unmount();
 ```
@@ -75,7 +78,9 @@ call. `dom_id`/`url` are accepted as aliases, `domId` defaults to `"mcp-explorer
 and `endpoint` defaults to `"/mcp"`. `execEnabled` is an optional boolean that
 turns tool execution on or off for this mount; when omitted the build-time
 default applies (on in `vite dev`, off in production). It is fixed for the
-lifetime of the mount — there is no in-app toggle.
+lifetime of the mount — there is no in-app toggle. `endpointEditable` is an
+optional boolean (default `true`) controlling whether the endpoint field in the
+toolbar can be edited; set it to `false` to pin the viewer to a single server.
 `window.McpExplorer.mount(config)` is the
 same function, and `window.McpExplorer("/mcp")` is a shorthand where the string is
 the `domId`.
@@ -93,11 +98,16 @@ A minimal Oxygen helper that mirrors `swaggerhtml` lives in
 [`integrations/oxygen/mcpexplorer.jl`](integrations/oxygen/mcpexplorer.jl):
 
 ```julia
-function mcpexplorerhtml(endpoint::String; execenabled::Union{Nothing,Bool}=nothing) :: HTTP.Response
+function mcpexplorerhtml(
+    endpoint::String;
+    execenabled::Union{Nothing,Bool}=nothing,
+    endpointeditable::Union{Nothing,Bool}=nothing,
+) :: HTTP.Response
     viewerjs = readstaticfile("mcpexplorer/mcpexplorer.js")
     viewerstyles = readstaticfile("mcpexplorer/mcpexplorer.css")
 
     execoption = isnothing(execenabled) ? "" : ", execEnabled: $(execenabled)"
+    endpointoption = isnothing(endpointeditable) ? "" : ", endpointEditable: $(endpointeditable)"
 
     html("""
         <!DOCTYPE html>
@@ -112,7 +122,7 @@ function mcpexplorerhtml(endpoint::String; execenabled::Union{Nothing,Bool}=noth
             <div id="mcp-explorer"></div>
             <script>$viewerjs</script>
             <script>
-                window.McpExplorer({ endpoint: "$endpoint", domId: "mcp-explorer"$execoption });
+                window.McpExplorer({ endpoint: "$endpoint", domId: "mcp-explorer"$execoption$endpointoption });
             </script>
         </body>
         </html>
@@ -132,8 +142,9 @@ register_internal(
 )
 ```
 
-Pass `execenabled=false` (or `true`) to force tool execution off/on and lock the
-viewer's toolbar toggle.
+Pass `execenabled=false` (or `true`) to force tool execution off/on, and
+`endpointeditable=false` to lock the endpoint field so the page stays pinned to
+one server.
 
 ### Standalone page
 

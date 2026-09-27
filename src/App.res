@@ -1,5 +1,9 @@
 @react.component
-let make = (~initialEndpoint: string, ~initialExecEnabled: option<bool>) => {
+let make = (
+  ~initialEndpoint: string,
+  ~initialExecEnabled: option<bool>,
+  ~initialEndpointEditable: option<bool>,
+) => {
   let (endpoint, setEndpoint) = React.useState(() => initialEndpoint)
   let (refreshKey, setRefreshKey) = React.useState(() => 0)
   let (activeTab, setActiveTab) = React.useState(() => "Tools")
@@ -9,6 +13,9 @@ let make = (~initialEndpoint: string, ~initialExecEnabled: option<bool>) => {
   // host via `execEnabled`, or falls back to the build-time default. There is no
   // in-app toggle; hosts control it when they mount the viewer.
   let execEnabled = initialExecEnabled->Option.getOr(Config.execDefault)
+  // Whether the endpoint field is editable in the toolbar. Hosts can lock it to
+  // fix the viewer to a single server.
+  let endpointEditable = initialEndpointEditable->Option.getOr(true)
   let discovery = UseDiscovery.use(endpoint, refreshKey)
 
   // Apply a view without touching history (used by popstate / push).
@@ -143,6 +150,7 @@ let make = (~initialEndpoint: string, ~initialExecEnabled: option<bool>) => {
       <ConfigBar
         endpoint
         onEndpointChange={value => setEndpoint(_ => value)}
+        endpointLocked={!endpointEditable}
         onRefresh
         loading
       />

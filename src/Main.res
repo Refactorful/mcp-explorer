@@ -4,25 +4,31 @@
 //   window.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer" })
 //   window.McpExplorer({ endpoint: "http://127.0.0.1:8080/mcp", domId: "root" })
 //   window.McpExplorer({ endpoint: "/mcp", execEnabled: true })
+//   window.McpExplorer({ endpoint: "/mcp", endpointEditable: false })
 //   window.McpExplorer("/mcp")            // shorthand: first arg is the domId
 //   window.McpExplorer.mount({ ... })     // same function
 //
 // `execEnabled` (optional boolean) turns tool execution on or off for this
 // mount. When omitted the build-time default is used (on in `vite dev`, off in
 // production). It is fixed for the lifetime of the mount.
+//
+// `endpointEditable` (optional boolean) controls whether the endpoint field in
+// the toolbar can be edited. Defaults to `true`.
 // Returns `{ unmount }` so callers can tear the explorer down.
 
 %%raw(`import "./styles.css"`)
 
 let normalizeConfig: 'config => {..} = %raw(`(function(config) {
   if (typeof config === "string") {
-    return { domId: config, endpoint: "/mcp", execEnabled: undefined };
+    return { domId: config, endpoint: "/mcp", execEnabled: undefined, endpointEditable: undefined };
   }
   var options = config || {};
   return {
     domId: options.domId || options.dom_id || "mcp-explorer",
     endpoint: options.endpoint || options.url || "/mcp",
     execEnabled: typeof options.execEnabled === "boolean" ? options.execEnabled : undefined,
+    endpointEditable:
+      typeof options.endpointEditable === "boolean" ? options.endpointEditable : undefined,
   };
 })`)
 
@@ -41,9 +47,14 @@ let mount = (config: 'config): {..} => {
   // `None` when the caller omitted `execEnabled`; App falls back to the
   // build-time default.
   let initialExecEnabled: option<bool> = normalized["execEnabled"]
+  // `None` when the caller omitted `endpointEditable`; App defaults to editable.
+  let initialEndpointEditable: option<bool> = normalized["endpointEditable"]
   let container = getElement(domId)
   let root = ReactDOM.Client.createRoot(container)
-  ReactDOM.Client.Root.render(root, <App initialEndpoint=endpoint initialExecEnabled />)
+  ReactDOM.Client.Root.render(
+    root,
+    <App initialEndpoint=endpoint initialExecEnabled initialEndpointEditable />,
+  )
   {"unmount": () => ReactDOM.Client.Root.unmount(root, ())}
 }
 

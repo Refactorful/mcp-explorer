@@ -108,6 +108,11 @@ body {
   max-width: 480px;
 }
 
+.text-input:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
 .json-editor.invalid {
   border-color: var(--danger);
 }
