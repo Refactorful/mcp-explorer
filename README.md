@@ -26,14 +26,23 @@ The distribution builds two artifacts:
 - **Tool viewer:** name/description, a collapsible JSON-Schema inspector
   (collapsed by default), a schema-driven "Try it" form, a `Result`/`Raw`/`cURL`
   view.
-- **Schema-driven form:** one typed control per input — `enum` becomes a
-  `<select>` of valid options, `boolean` a checkbox, `integer`/`number` a
-  validated numeric input, `string` a text input, nested objects recurse
-  (resolving `$ref`/`$defs`), and arrays/unknown sub-schemas fall back to a JSON
-  editor. Defaults are pre-filled and `required` fields are enforced by native
-  form validation. A `JSON` toggle exposes the raw arguments. If a schema's
-  `default` disagrees with its declared `type` (e.g. `"[]"` for an array), the
-  value is coerced to the declared type so requests stay valid.
+- **Schema-driven form:** one typed control per input — `enum` (and `const`)
+  becomes a `<select>` of valid options, `boolean` a checkbox,
+  `integer`/`number` a validated numeric input, `string` a text input.
+  Containers recurse rather than falling back to raw JSON:
+  - nested objects (resolving `$ref`/`$defs`) render their fields, including
+    `allOf` merged into a single schema;
+  - `additionalProperties` / `patternProperties` render a dynamic key/value
+    editor (add/rename/remove rows, values typed from the value schema and
+    pre-filled with its defaults), and can sit alongside declared `properties`;
+  - arrays (singular or tuple `items`/`prefixItems`) render a dynamic list with
+    add/remove/reorder and `minItems`/`maxItems` enforcement;
+  - `oneOf`/`anyOf` render a branch selector (honouring `discriminator`);
+  - `type` unions (e.g. `["string","null"]`) use their non-null control.
+  Defaults are pre-filled and `required` fields are enforced by native form
+  validation. A `JSON` toggle exposes the raw arguments. If a schema's `default`
+  disagrees with its declared `type` (e.g. `"[]"` for an array), the value is
+  coerced to the declared type so requests stay valid.
 - **Prompt viewer:** argument form with required-field enforcement, rendered
   messages, and a raw JSON view.
 - **Navigation:** master–detail split view — the list stays pinned while the

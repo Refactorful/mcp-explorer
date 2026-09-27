@@ -237,10 +237,22 @@ invalid value. Keep that behavior.
 - Master–detail split: list pinned left (sticky, own scroll), detail right.
   No back button on desktop; `.back-btn` appears only under 860px where the
   layout collapses. History is kept via `History.push/popstate`.
-- Tool "Try it": schema-driven form (enum→select, boolean→checkbox,
-  integer/number→pattern-validated text, nested objects recurse with `$ref`
-  resolution, arrays/unknown→JSON editor), native `required`/`pattern`
-  validation, Form/JSON toggle, Reset. Raw schema is a **collapsed `<details>`**.
+- Tool "Try it": schema-driven form (enum/const→select, boolean→checkbox,
+  integer/number→pattern-validated text, nested objects recurse with `$ref` and
+  `allOf` resolution, `additionalProperties`/`patternProperties` maps→dynamic
+  key/value rows whose values are typed by the value schema (and can coexist
+  with declared `properties`), arrays/tuples→dynamic list with add/remove/
+  reorder, `oneOf`/`anyOf`→branch selector with optional discriminator, type
+  unions use the non-null control; only unrecognised shapes fall back to the
+  JSON editor), native `required`/`pattern` validation, Form/JSON toggle, Reset.
+  Raw schema is a **collapsed `<details>`**.
+- Recursive renderer lives in `SchemaForm.res` (`renderFields`/`renderField`/
+  `renderControl`); stateful containers are separate components —
+  `MapControl.res` (key/value), `ArrayControl.res` (lists), `VariantControl.res`
+  (composition). They receive a `renderValue`/`renderItem`/`renderBranch`
+  callback so nested values reuse the same recursive controls (avoids a module
+  cycle). `Schema.res` owns schema normalisation (`effective` collapses
+  `allOf`/`$ref`, `primaryType`/`isNullable`, tuple/pattern helpers).
 - Execution toggle defaults **on in `vite dev`, off in production**.
 - Prompts tab is hidden unless `capabilities.prompts`.
 

@@ -70,12 +70,13 @@ describe("SchemaForm", () => {
     expect(html).toContain("lat");
   });
 
-  test("renders arrays as a JSON fallback editor", () => {
+  test("renders arrays as a dynamic list builder", () => {
     const schema = {
       type: "object",
       properties: { tags: { type: "array", items: { type: "string" } } },
     };
-    const html = render(schema, { tags: [] });
-    expect(html).toContain("<textarea");
+    const html = render(schema, { tags: ["a"] });
+    expect(html).toContain("schema-array");
+    expect(html).toContain("Add item");
   });
 });

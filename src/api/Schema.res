@@ -36,8 +36,18 @@ let resolveRef = (dict: dict<JSON.t>, root: JSON.t): option<JSON.t> =>
   | None => None
   }
 
+// A JSON-Schema `type` may be a single string or an array of strings (a union,
+// e.g. `["string", "null"]`). `typeOf` reports the first non-`null` member.
 let typeOf = (dict: dict<JSON.t>): option<string> =>
-  dict->Dict.get("type")->Option.flatMap(JSON.Decode.string)
+  switch dict->Dict.get("type") {
+  | Some(JSON.String(type_)) => Some(type_)
+  | Some(json) =>
+    switch JSON.Decode.array(json) {
+    | Some(items) => items->Array.filterMap(JSON.Decode.string)->Array.find(item => item != "null")
+    | None => None
+    }
+  | None => None
+  }
 
 let parseStringJSON = (text: string): option<JSON.t> =>
   try {
@@ -100,10 +110,248 @@ let coerceToType = (value: JSON.t, type_: option<string>): JSON.t =>
   | Some(_) | None => value
   }
 
+// --- Composition, type unions and array/map helpers -------------------------
+
+type regexp
+@new external makeRegExp: (string, string) => regexp = "RegExp"
+@send external testRegExp: (regexp, string) => bool = "test"
+
+let matchesPattern = (pattern: string, text: string): bool =>
+  try {
+    testRegExp(makeRegExp(pattern, ""), text)
+  } catch {
+  | JsExn(_) => true
+  }
+
+// Resolve a top-level `$ref` against `root`, falling back to the schema itself.
+let deref = (schema: JSON.t, root: JSON.t): JSON.t =>
+  switch JSON.Decode.object(schema) {
+  | Some(dict) =>
+    switch resolveRef(dict, root) {
+    | Some(resolved) => resolved
+    | None => schema
+    }
+  | None => schema
+  }
+
+let typesOf = (schema: JSON.t): array<string> =>
+  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("type")) {
+  | Some(JSON.String(type_)) => [type_]
+  | Some(json) =>
+    switch JSON.Decode.array(json) {
+    | Some(items) => items->Array.filterMap(JSON.Decode.string)
+    | None => []
+    }
+  | None => []
+  }
+
+let primaryType = (schema: JSON.t): option<string> =>
+  typesOf(schema)->Array.find(item => item != "null")
+
+let isNullable = (schema: JSON.t): bool =>
+  typesOf(schema)->Array.some(item => item == "null")
+
+let constOf = (schema: JSON.t): option<JSON.t> =>
+  switch JSON.Decode.object(schema) {
+  | Some(dict) => dict->Dict.get("const")
+  | None => None
+  }
+
+let titleOf = (schema: JSON.t): option<string> =>
+  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("title")) {
+  | Some(json) => JSON.Decode.string(json)
+  | None => None
+  }
+
+let variantsOf = (schema: JSON.t): option<array<JSON.t>> =>
+  switch JSON.Decode.object(schema) {
+  | Some(dict) =>
+    switch dict->Dict.get("oneOf")->Option.flatMap(JSON.Decode.array) {
+    | Some(items) if Array.length(items) > 0 => Some(items)
+    | _ =>
+      switch dict->Dict.get("anyOf")->Option.flatMap(JSON.Decode.array) {
+      | Some(items) if Array.length(items) > 0 => Some(items)
+      | _ => None
+      }
+    }
+  | None => None
+  }
+
+let discriminatorOf = (schema: JSON.t): option<string> =>
+  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("discriminator")) {
+  | Some(json) =>
+    switch JSON.Decode.object(json)->Option.flatMap(dict => dict->Dict.get("propertyName")) {
+    | Some(propertyName) => JSON.Decode.string(propertyName)
+    | None => None
+    }
+  | None => None
+  }
+
+// `additionalProperties` describes an arbitrary map: the value schema (or `true`
+// for untyped values). `false` means no extra keys, so there is nothing to edit.
+let additionalPropertiesOf = (schema: JSON.t): option<JSON.t> =>
+  switch JSON.Decode.object(schema) {
+  | Some(dict) =>
+    switch dict->Dict.get("additionalProperties") {
+    | Some(JSON.Boolean(false)) => None
+    | Some(value) => Some(value)
+    | None => None
+    }
+  | None => None
+  }
+
+let patternPropertiesOf = (schema: JSON.t): option<array<(string, JSON.t)>> =>
+  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("patternProperties")) {
+  | Some(json) =>
+    switch JSON.Decode.object(json) {
+    | Some(patterns) =>
+      switch patterns->Dict.toArray {
+      | [] => None
+      | entries => Some(entries)
+      }
+    | None => None
+    }
+  | None => None
+  }
+
+let propertiesOf = (schema: JSON.t): option<dict<JSON.t>> =>
+  switch JSON.Decode.object(schema) {
+  | Some(dict) => dict->Dict.get("properties")->Option.flatMap(JSON.Decode.object)
+  | None => None
+  }
+
+let propertyNames = (schema: JSON.t): array<string> =>
+  switch propertiesOf(schema) {
+  | Some(properties) => properties->Dict.keysToArray
+  | None => []
+  }
+
+let requiredOf = (schema: JSON.t): array<string> =>
+  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("required")) {
+  | Some(json) =>
+    switch JSON.Decode.array(json) {
+    | Some(items) => items->Array.filterMap(JSON.Decode.string)
+    | None => []
+    }
+  | None => []
+  }
+
+// 2020-12 `prefixItems` (or draft-07 `items` as an array) describes a tuple.
+let tupleItemsOf = (schema: JSON.t): option<array<JSON.t>> =>
+  switch JSON.Decode.object(schema) {
+  | Some(dict) =>
+    switch dict->Dict.get("prefixItems")->Option.flatMap(JSON.Decode.array) {
+    | Some(items) if Array.length(items) > 0 => Some(items)
+    | _ =>
+      switch dict->Dict.get("items") {
+      | Some(json) => JSON.Decode.array(json)
+      | None => None
+      }
+    }
+  | None => None
+  }
+
+// Singular `items` schema (objects only; an array `items` is a tuple).
+let itemSchemaOf = (schema: JSON.t): option<JSON.t> =>
+  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("items")) {
+  | Some(json) =>
+    switch JSON.Decode.object(json) {
+    | Some(_) => Some(json)
+    | None => None
+    }
+  | None => None
+  }
+
+let intField = (schema: JSON.t, name: string): option<int> =>
+  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get(name)) {
+  | Some(json) => JSON.Decode.float(json)->Option.map(Float.toInt)
+  | None => None
+  }
+
+let minItemsOf = (schema: JSON.t): int => intField(schema, "minItems")->Option.getOr(0)
+let maxItemsOf = (schema: JSON.t): option<int> => intField(schema, "maxItems")
+let minPropertiesOf = (schema: JSON.t): int => intField(schema, "minProperties")->Option.getOr(0)
+let maxPropertiesOf = (schema: JSON.t): option<int> => intField(schema, "maxProperties")
+
+let mergeStringList = (a: array<string>, b: array<string>): array<string> =>
+  b->Array.reduce(a, (acc, item) =>
+    acc->Array.some(existing => existing == item) ? acc : Array.concat(acc, [item])
+  )
+
+// Shallow schema merge used to collapse `allOf`. `properties` are unioned and
+// merged recursively; `required` arrays are unioned; later values win for
+// everything else. `allOf` itself is dropped from the result.
+let rec mergeSchemas = (a: JSON.t, b: JSON.t): JSON.t =>
+  switch (JSON.Decode.object(a), JSON.Decode.object(b)) {
+  | (Some(da), Some(db)) =>
+    let out = Dict.make()
+    da->Dict.toArray->Array.forEach(((key, value)) =>
+      if key != "allOf" {
+        out->Dict.set(key, value)
+      }
+    )
+    db->Dict.toArray->Array.forEach(((key, value)) =>
+      if key != "allOf" {
+        switch key {
+        | "properties" =>
+          switch (propertiesOf(a), propertiesOf(b)) {
+          | (Some(pa), Some(pb)) =>
+            let merged = Dict.make()
+            pa->Dict.toArray->Array.forEach(((name, schema)) => merged->Dict.set(name, schema))
+            pb->Dict.toArray->Array.forEach(((name, schema)) =>
+              merged->Dict.set(
+                name,
+                switch merged->Dict.get(name) {
+                | Some(existing) => mergeSchemas(existing, schema)
+                | None => schema
+                },
+              )
+            )
+            out->Dict.set("properties", JSON.Encode.object(merged))
+          | _ => out->Dict.set(key, value)
+          }
+        | "required" =>
+          out->Dict.set(
+            "required",
+            mergeStringList(requiredOf(a), requiredOf(b))
+            ->Array.map(JSON.Encode.string)
+            ->JSON.Encode.array,
+          )
+        | _ => out->Dict.set(key, value)
+        }
+      }
+    )
+    JSON.Encode.object(out)
+  | (Some(_), None) => a
+  | (None, Some(_)) => b
+  | (None, None) => a
+  }
+
+// Collapse `allOf` (resolving `$ref`s) into a single effective schema. Nested
+// sub-schemas are normalised lazily as the form descends into them.
+let rec effective = (schema: JSON.t, root: JSON.t, depth: int): JSON.t =>
+  if depth > 16 {
+    schema
+  } else {
+    let resolved = deref(schema, root)
+    switch JSON.Decode.object(resolved) {
+    | Some(dict) =>
+      switch dict->Dict.get("allOf")->Option.flatMap(JSON.Decode.array) {
+      | Some(branches) if Array.length(branches) > 0 =>
+        branches->Array.reduce(resolved, (acc, branch) =>
+          mergeSchemas(acc, effective(branch, root, depth + 1))
+        )
+      | _ => resolved
+      }
+    | None => resolved
+    }
+  }
+
 let rec defaultFor = (schema: JSON.t, root: JSON.t, depth: int): JSON.t =>
   if depth > 16 {
     JSON.Encode.null
   } else {
+    let schema = effective(schema, root, 0)
     switch JSON.Decode.object(schema) {
     | None => JSON.Encode.null
     | Some(dict) =>
@@ -113,6 +361,9 @@ let rec defaultFor = (schema: JSON.t, root: JSON.t, depth: int): JSON.t =>
         switch dict->Dict.get("default") {
         | Some(value) => coerceToType(value, typeOf(dict))
         | None =>
+          switch constOf(schema) {
+          | Some(value) => value
+          | None =>
           switch enumDefault(dict) {
           | Some(value) => value
           | None =>
@@ -134,6 +385,7 @@ let rec defaultFor = (schema: JSON.t, root: JSON.t, depth: int): JSON.t =>
         }
       }
     }
+  }
   }
 and enumDefault = (dict: dict<JSON.t>): option<JSON.t> =>
   switch dict->Dict.get("enum")->Option.flatMap(JSON.Decode.array) {
@@ -169,6 +421,11 @@ and compositionDefault = (dict: dict<JSON.t>, root: JSON.t, depth: int): option<
 }
 
 let defaultsFromSchema = (schema: JSON.t): JSON.t => defaultFor(schema, schema, 0)
+
+// Like `defaultsFromSchema`, but resolves `$ref`s against an explicit root
+// (needed for sub-schemas such as `additionalProperties` values that reference
+// the enclosing document's `$defs`).
+let defaultsWithRoot = (schema: JSON.t, root: JSON.t): JSON.t => defaultFor(schema, root, 0)
 
 let requiredFields = (schema: JSON.t): array<string> =>
   switch JSON.Decode.object(schema) {
