@@ -62,22 +62,31 @@ body {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* The top bar mirrors the body's columns: the brand + endpoint sit in the main
+   column (endpoint flush right, aligned to the main content's edge) and the
+   sidebar toggle sits in the sidebar column on the far right. */
 .app-header {
   grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
   align-items: flex-end;
-  justify-content: space-between;
 }
 
-/* Brand + endpoint live on the left of the top bar so the right column holds
-   only the sidebar; the sidebar toggle is the sole control on the far right. */
+.app.collapsed .app-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .app-header-left {
+  grid-column: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-end;
+}
+
+.app-header-left .config-bar {
+  margin-left: auto;
 }
 
 .brand h1 {
@@ -744,6 +753,8 @@ body {
    badge for messages that arrived while it was hidden. */
 
 .sidebar-toggle {
+  grid-column: 2;
+  justify-self: end;
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -971,6 +982,10 @@ body {
     grid-template-rows: auto;
     height: auto;
     min-height: 100vh;
+  }
+  .app-header,
+  .app.collapsed .app-header {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
   .app-main {
     grid-row: auto;
