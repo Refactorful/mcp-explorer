@@ -14,8 +14,8 @@ The distribution builds two artifacts:
 
 | Artifact | Purpose |
 | --- | --- |
-| `data/mcpexplorer/mcpexplorer.js` + `mcpexplorer.css` | Self-contained IIFE exposing the `window.McpExplorer` function. This is the swagger-style integration. |
-| `data/mcpexplorer/index.html` | A standalone single-file page that mounts itself (handy for direct serving/debugging). |
+| `bundle/mcpexplorer/mcpexplorer.js` + `mcpexplorer.css` | Self-contained IIFE exposing the `window.McpExplorer` function. This is the swagger-style integration. |
+| `bundle/mcpexplorer/index.html` | A standalone single-file page that mounts itself (handy for direct serving/debugging). |
 
 ## What it does
 
@@ -149,7 +149,7 @@ npm install
 npm run res:watch      # terminal 1
 npm run dev            # terminal 2
 
-# Production artifacts -> data/mcpexplorer/{mcpexplorer.js,mcpexplorer.css,index.html}
+# Production artifacts -> bundle/mcpexplorer/{mcpexplorer.js,mcpexplorer.css,index.html}
 npm run bundle
 
 # Unit tests (Vitest + an SSR smoke test)
@@ -201,7 +201,7 @@ test/
   app.smoke.test.mjs  app.navigation.test.mjs  main.mount.test.mjs
   schemaform.test.mjs  tooldetail.form.test.mjs  curl.test.mjs
 scripts/
-  copy-bundle.mjs          dist*/ -> data/mcpexplorer/
+  copy-bundle.mjs          dist*/ -> bundle/mcpexplorer/
   validate-live.mjs        live transport smoke test
 vite.config.js             single-file HTML build
 vite.lib.config.js         IIFE global build

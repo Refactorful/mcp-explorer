@@ -12,7 +12,7 @@ typed and decode errors are caught at the boundary instead of at render time.
 - **What:** a static SPA that talks JSON-RPC to Oxygen's `POST /mcp` endpoint.
 - **Where it runs:** served by the same Oxygen server (no CORS, no proxy, no CDN).
 - **How it ships:** compiled to a single self-contained HTML bundle vendored under
-  `data/mcpexplorer/`, following the existing `data/dashboard` and Swagger/Redoc
+  `bundle/mcpexplorer/`, following the existing `data/dashboard` and Swagger/Redoc
   precedent (`src/autodoc.jl`, `src/core.jl:937-981`).
 - **Why ReScript:** the protocol (method names, required headers, `_meta`, result
   shapes, content-block variants) becomes a set of types with total decoders; the
@@ -63,7 +63,7 @@ and are the most common source of setup breakage.
 
 ```
 Browser (offline, same-origin)
-  GET {docspath}/mcp  ──► data/mcpexplorer/index.html (inlined JS/CSS)
+  GET {docspath}/mcp  ──► bundle/mcpexplorer/index.html (inlined JS/CSS)
         │
         │  POST {prefix}{mcp_path}   JSON-RPC 2.0 (modern 2026-07-28)
         ▼
@@ -336,7 +336,7 @@ UX notes:
 
 - Dev: `rescript build -w` + `vite` (via `@jihchi/vite-plugin-rescript`).
 - Prod: `vite build` with `vite-plugin-singlefile` → one `index.html`.
-- Copy output to `data/mcpexplorer/index.html`.
+- Copy output to `bundle/mcpexplorer/index.html`.
 
 Offline guarantee: no CDN, no external fonts; everything inlined. Verify by
 opening the built file with the network disabled.
@@ -347,7 +347,7 @@ opening the built file with the network disabled.
 
 Follows the Swagger/Redoc + dashboard patterns.
 
-1. **Vendor:** commit `data/mcpexplorer/index.html`.
+1. **Vendor:** commit `bundle/mcpexplorer/index.html`.
 2. **Constants:** add `MCP_EXPLORER_VERSION = "mcpexplorer"` (or reuse the literal)
    in `src/constants.jl`.
 3. **Render helper:** add `mcpexplorerhtml(mcp_endpoint)` in a new
@@ -393,7 +393,7 @@ viewer/
     components/{ConfigBar,Tabs,ToolList,ToolDetail,PromptList,PromptDetail,SchemaView,JsonEditor,ResultView,ContentView}.res
     styles.css
   test/{Codec_test.res,Mcp_test.res}
-data/mcpexplorer/index.html          # committed build artifact
+bundle/mcpexplorer/index.html          # committed build artifact
 src/mcpexplorer.jl                   # mcpexplorerhtml() + route wiring
 ```
 
@@ -425,7 +425,7 @@ src/mcpexplorer.jl                   # mcpexplorerhtml() + route wiring
   body contains the bundle marker; injected endpoint equals
   `prefix + mcp_path` for parametrized prefix/path combinations.
 - **Drift check (optional CI):** rebuild the bundle and assert the committed
-  `data/mcpexplorer/index.html` is byte-identical to source output.
+  `bundle/mcpexplorer/index.html` is byte-identical to source output.
 - **Manual E2E:** run `demo/` MCP server, load viewer, exercise a tool and a
   prompt.
 

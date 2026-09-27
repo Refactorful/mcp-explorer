@@ -9,7 +9,7 @@ A same-origin, offline-capable single-page viewer for **any MCP server**
 form, invokes tools, and can be embedded into any host page. It has **no Oxygen
 dependency**; the MCP endpoint is passed in at mount time.
 
-Two build artifacts are committed under `data/mcpexplorer/`:
+Two build artifacts are committed under `bundle/mcpexplorer/`:
 
 - `mcpexplorer.js` + `mcpexplorer.css` — self-contained IIFE exposing the
   `window.McpExplorer` function (the embeddable integration).
@@ -27,7 +27,7 @@ npm test                                             # rescript build + vitest
 npm run validate:live                                # live transport smoke test
 MCP_ENDPOINT=http://127.0.0.1:8080/mcp npm run validate:live
 
-npm run bundle                                       # build both + copy to data/mcpexplorer
+npm run bundle                                       # build both + copy to bundle/mcpexplorer
 npx vite build --config vite.lib.config.js           # lib only
 ```
 
@@ -56,7 +56,7 @@ scripts/{copy-bundle,validate-live}.mjs
 vite.config.js             single-file HTML build
 vite.lib.config.js         IIFE global build
 integrations/oxygen/       reference Julia helper (example host)
-data/mcpexplorer/            committed build artifacts
+bundle/mcpexplorer/            committed build artifacts
 ```
 
 `rescript.json`: `sources` = `src` + `test` (dev), `package-specs` esmodule
@@ -161,7 +161,7 @@ let getElement: string => 'element = %raw(`(function(id) { ... })`)
   `Main.res`), otherwise the lib build emits no CSS. The HTML build inlines it
   via `vite-plugin-singlefile`.
 - `.gitignore` ignores `*.res.mjs`, `lib/`, `dist/`, `dist-lib/`. The committed
-  artifacts are only under `data/mcpexplorer/`.
+  artifacts are only under `bundle/mcpexplorer/`.
 
 ## Testing
 
@@ -262,7 +262,7 @@ invalid value. Keep that behavior.
    signals).
 2. `npm test` (all tests, including DOM/SSR).
 3. `npm run validate:live` against `http://127.0.0.1:8080/mcp`.
-4. `npm run bundle` to refresh `data/mcpexplorer/*` and eyeball the diff.
+4. `npm run bundle` to refresh `bundle/mcpexplorer/*` and eyeball the diff.
 5. Keep the human-facing docs (`README.md`) in sync with behavior changes.
 
 Do not commit unless asked.
