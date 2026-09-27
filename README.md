@@ -50,9 +50,10 @@ The distribution builds two artifacts:
   so browser back/forward work, and narrow screens collapse to a single pane
   with a back control.
 - Prompts tab is hidden when the server does not advertise the capability.
-- Execution is behind a toolbar toggle: **on in `vite dev`, off in production
-  bundles**. A host can force the state (and lock the toggle) per mount with the
-  `execEnabled` config option.
+- Execution is **configured by the host at mount time**, not by an in-app
+  toggle. It defaults to **on in `vite dev`, off in production bundles**, and a
+  host can force it per mount with the `execEnabled` config option. When off, the
+  tool "Try it" area is disabled and explains that execution is disabled.
 
 ## Global mount API (swagger-style)
 
@@ -64,7 +65,7 @@ handle:
 const viewer = window.McpExplorer({
   endpoint: "http://127.0.0.1:8080/mcp", // or a same-origin path like "/mcp"
   domId: "mcp-explorer",
-  execEnabled: true, // optional: force execution and lock the toggle
+  execEnabled: true, // optional: force tool execution on/off for this mount
 });
 // viewer.unmount();
 ```
@@ -72,9 +73,9 @@ const viewer = window.McpExplorer({
 `domId` is the id of an empty container element; `endpoint` is the MCP URL to
 call. `dom_id`/`url` are accepted as aliases, `domId` defaults to `"mcp-explorer"`
 and `endpoint` defaults to `"/mcp"`. `execEnabled` is an optional boolean that
-forces the state of the "Enable execution" toggle and locks it (the checkbox is
-disabled, so end users cannot change it); when omitted the build-time default
-applies (on in `vite dev`, off in production) and the toggle stays user-changeable.
+turns tool execution on or off for this mount; when omitted the build-time
+default applies (on in `vite dev`, off in production). It is fixed for the
+lifetime of the mount — there is no in-app toggle.
 `window.McpExplorer.mount(config)` is the
 same function, and `window.McpExplorer("/mcp")` is a shorthand where the string is
 the `domId`.
@@ -92,9 +93,11 @@ A minimal Oxygen helper that mirrors `swaggerhtml` lives in
 [`integrations/oxygen/mcpexplorer.jl`](integrations/oxygen/mcpexplorer.jl):
 
 ```julia
-function mcpexplorerhtml(endpoint::String) :: HTTP.Response
+function mcpexplorerhtml(endpoint::String; execenabled::Union{Nothing,Bool}=nothing) :: HTTP.Response
     viewerjs = readstaticfile("mcpexplorer/mcpexplorer.js")
     viewerstyles = readstaticfile("mcpexplorer/mcpexplorer.css")
+
+    execoption = isnothing(execenabled) ? "" : ", execEnabled: $(execenabled)"
 
     html("""
         <!DOCTYPE html>
@@ -109,7 +112,7 @@ function mcpexplorerhtml(endpoint::String) :: HTTP.Response
             <div id="mcp-explorer"></div>
             <script>$viewerjs</script>
             <script>
-                window.McpExplorer({ endpoint: "$endpoint", domId: "mcp-explorer" });
+                window.McpExplorer({ endpoint: "$endpoint", domId: "mcp-explorer"$execoption });
             </script>
         </body>
         </html>
@@ -128,6 +131,9 @@ register_internal(
     () -> mcpexplorerhtml(join_url_path(ctx.service.prefix[], mcp_path)),
 )
 ```
+
+Pass `execenabled=false` (or `true`) to force tool execution off/on and lock the
+viewer's toolbar toggle.
 
 ### Standalone page
 

@@ -5,12 +5,10 @@ let make = (~initialEndpoint: string, ~initialExecEnabled: option<bool>) => {
   let (activeTab, setActiveTab) = React.useState(() => "Tools")
   let (selectedTool, setSelectedTool) = React.useState(() => None)
   let (selectedPrompt, setSelectedPrompt) = React.useState(() => None)
-  // When the host supplies `execEnabled`, execution is forced to that value and
-  // the toolbar toggle is locked (disabled).
-  let execLocked = initialExecEnabled->Option.isSome
-  let (execEnabled, setExecEnabled) = React.useState(() =>
-    initialExecEnabled->Option.getOr(Config.execDefault)
-  )
+  // Execution is fixed for the lifetime of the mount: it is either forced by the
+  // host via `execEnabled`, or falls back to the build-time default. There is no
+  // in-app toggle; hosts control it when they mount the viewer.
+  let execEnabled = initialExecEnabled->Option.getOr(Config.execDefault)
   let discovery = UseDiscovery.use(endpoint, refreshKey)
 
   // Apply a view without touching history (used by popstate / push).
@@ -146,12 +144,6 @@ let make = (~initialEndpoint: string, ~initialExecEnabled: option<bool>) => {
         endpoint
         onEndpointChange={value => setEndpoint(_ => value)}
         onRefresh
-        execEnabled
-        execLocked
-        onToggleExec={() =>
-          if !execLocked {
-            setExecEnabled(value => !value)
-          }}
         loading
       />
     </header>

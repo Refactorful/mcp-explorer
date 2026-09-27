@@ -112,15 +112,6 @@ body {
   border-color: var(--danger);
 }
 
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--fg);
-  user-select: none;
-}
-
 .btn {
   background: var(--bg-elevated);
   color: var(--fg);
@@ -691,6 +682,17 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.tryit-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.tryit-disabled {
+  opacity: 0.6;
 }
 
 .mode-toggle {

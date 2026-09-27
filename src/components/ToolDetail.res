@@ -63,6 +63,9 @@ let make = (~tool: Protocol.tool, ~endpoint: string, ~execEnabled: bool, ~onBack
   let jsonInvalid = mode == "json" && parseError->Option.isSome
   let runDisabled = !execEnabled || jsonInvalid
   let requiredFields = Schema.requiredFields(tool.inputSchema)
+  // When execution is off, disable the whole "Try it" area (fields, toggles,
+  // actions) and say why.
+  let disabledClass = execEnabled ? "" : " tryit-disabled"
 
   <div className="detail">
     <div className="detail-header">
@@ -96,47 +99,57 @@ let make = (~tool: Protocol.tool, ~endpoint: string, ~execEnabled: bool, ~onBack
           <div className="mode-toggle">
             <button
               className={mode == "form" ? "subtab active" : "subtab"}
+              disabled={!execEnabled}
               onClick={_ => setMode(_ => "form")}>
               {"Form"->React.string}
             </button>
             <button
               className={mode == "json" ? "subtab active" : "subtab"}
+              disabled={!execEnabled}
               onClick={_ => setMode(_ => "json")}>
               {"JSON"->React.string}
             </button>
           </div>
         </div>
+        {!execEnabled
+          ? <p className="warning">
+              {"Tool execution is disabled. Enable it from the host by mounting McpExplorer with `execEnabled: true`."->React.string}
+            </p>
+          : React.null}
         <form
+          className={disabledClass}
           onSubmit={event => {
             ReactEvent.Form.preventDefault(event)
             if execEnabled && !jsonInvalid && (mode == "json" || formValid) {
               onRun()
             }
           }}>
-          {mode == "form"
-            ? <SchemaForm
-                key={Int.toString(formKey)}
-                schema={tool.inputSchema}
-                value=args
-                onChange=applyArgs
-                onValidityChange={valid => setFormValid(_ => valid)}
-              />
-            : <JsonEditor value=argsText onChange=onTextChange error=parseError />}
-          <div className="actions">
-            <button type_="submit" className="btn primary" disabled=runDisabled>
-              {"Run tool"->React.string}
-            </button>
-            <button type_="button" className="btn" onClick={_ => onReset()}>
-              {"Reset"->React.string}
-            </button>
-            {!execEnabled
-              ? <span className="warning">
-                  {"Execution disabled — enable it in the toolbar."->React.string}
-                </span>
-              : mode == "form" && !formValid
-                ? <span className="warning"> {"Fix invalid JSON fields."->React.string} </span>
-                : React.null}
-          </div>
+          <fieldset className="tryit-fieldset" disabled={!execEnabled}>
+            {mode == "form"
+              ? <SchemaForm
+                  key={Int.toString(formKey)}
+                  schema={tool.inputSchema}
+                  value=args
+                  onChange=applyArgs
+                  onValidityChange={valid => setFormValid(_ => valid)}
+                />
+              : <JsonEditor value=argsText onChange=onTextChange error=parseError />}
+            <div className="actions">
+              <button type_="submit" className="btn primary" disabled=runDisabled>
+                {"Run tool"->React.string}
+              </button>
+              <button type_="button" className="btn" onClick={_ => onReset()}>
+                {"Reset"->React.string}
+              </button>
+              {!execEnabled
+                ? <span className="warning">
+                    {"Execution disabled — the host controls this setting."->React.string}
+                  </span>
+                : mode == "form" && !formValid
+                  ? <span className="warning"> {"Fix invalid JSON fields."->React.string} </span>
+                  : React.null}
+            </div>
+          </fieldset>
         </form>
         <ResultView state curl />
       </section>

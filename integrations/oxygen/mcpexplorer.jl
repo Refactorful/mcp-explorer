@@ -7,15 +7,22 @@
 const MCP_EXPLORER_VERSION = "mcpexplorer"
 
 """
-    mcpexplorerhtml(endpoint::String) :: HTTP.Response
+    mcpexplorerhtml(endpoint::String; execenabled::Union{Nothing,Bool}=nothing) :: HTTP.Response
 
 Return an HTML page that mounts the MCP explorer against `endpoint`.
+
+`execenabled` optionally turns tool execution on/off for this mount. When
+omitted the viewer's build-time default applies.
 """
-function mcpexplorerhtml(endpoint::String) :: HTTP.Response
+function mcpexplorerhtml(endpoint::String; execenabled::Union{Nothing,Bool}=nothing) :: HTTP.Response
 
     # load static content files
     viewerjs = readstaticfile("$MCP_EXPLORER_VERSION/mcpexplorer.js")
     viewerstyles = readstaticfile("$MCP_EXPLORER_VERSION/mcpexplorer.css")
+
+    # Only emit `execEnabled` when the caller supplied it, so the viewer can fall
+    # back to its build-time default (on in dev, off in production) otherwise.
+    execoption = isnothing(execenabled) ? "" : ", execEnabled: $(execenabled)"
 
     html("""
         <!DOCTYPE html>
@@ -33,7 +40,7 @@ function mcpexplorerhtml(endpoint::String) :: HTTP.Response
             <div id="mcp-explorer"></div>
             <script>$viewerjs</script>
             <script>
-                window.McpExplorer({ endpoint: "$endpoint", domId: "mcp-explorer" });
+                window.McpExplorer({ endpoint: "$endpoint", domId: "mcp-explorer"$execoption });
             </script>
         </body>
 
@@ -50,3 +57,7 @@ end
 #       "$docspath/mcp",
 #       () -> mcpexplorerhtml(join_url_path(ctx.service.prefix[], mcp_path)),
 #   )
+#
+# Pass `execenabled=false` to turn execution off for the page:
+#
+#   () -> mcpexplorerhtml(join_url_path(ctx.service.prefix[], mcp_path); execenabled=false),

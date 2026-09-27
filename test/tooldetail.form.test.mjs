@@ -31,7 +31,7 @@ describe("ToolDetail form", () => {
         React.createElement(ToolDetail.make, {
           tool,
           endpoint: "/mcp",
-          execEnabled: false,
+          execEnabled: true,
           onBack: () => {},
         }),
       );
@@ -62,7 +62,7 @@ describe("ToolDetail form", () => {
         React.createElement(ToolDetail.make, {
           tool,
           endpoint: "/mcp",
-          execEnabled: false,
+          execEnabled: true,
           onBack: () => {
             backCalls += 1;
           },
@@ -76,5 +76,30 @@ describe("ToolDetail form", () => {
       back.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     });
     expect(backCalls).toBe(1);
+  });
+
+  test("disables the whole Try-it area and explains why when execution is off", async () => {
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ToolDetail.make, {
+          tool,
+          endpoint: "/mcp",
+          execEnabled: false,
+          onBack: () => {},
+        }),
+      );
+    });
+
+    const fieldset = container.querySelector("fieldset.tryit-fieldset");
+    expect(fieldset).not.toBeNull();
+    expect(fieldset.disabled).toBe(true);
+    expect(container.querySelector("form").className).toContain("tryit-disabled");
+    expect(container.textContent).toContain("Tool execution is disabled");
+    expect(container.querySelector('button[type="submit"]').disabled).toBe(true);
   });
 });

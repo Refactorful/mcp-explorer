@@ -5,8 +5,27 @@ import { act } from "react";
 beforeEach(() => {
   document.body.innerHTML = '<div id="mcp-explorer"></div><div id="root"></div>';
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  globalThis.fetch = vi.fn(async () =>
-    new Response(
+  globalThis.fetch = vi.fn(async (_url, init) => {
+    const method = init && init.body ? JSON.parse(init.body).method : undefined;
+    if (method === "tools/list") {
+      return new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: {
+            tools: [
+              {
+                name: "add",
+                description: "Add two integers",
+                inputSchema: { type: "object", properties: {} },
+              },
+            ],
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(
       JSON.stringify({
         jsonrpc: "2.0",
         id: 1,
@@ -17,8 +36,8 @@ beforeEach(() => {
         },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },
-    ),
-  );
+    );
+  });
 });
 
 const flush = async () => {
@@ -39,6 +58,15 @@ const waitFor = async (predicate, timeout = 2000) => {
 };
 
 const execCheckbox = (container) => container.querySelector('input[type="checkbox"]');
+
+const openTools = async (container) => {
+  await waitFor(() => container.querySelector(".item") !== null);
+  const item = container.querySelector(".item");
+  await act(async () => {
+    item.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  });
+  await waitFor(() => container.querySelector("fieldset.tryit-fieldset") !== null);
+};
 
 describe("global mount API", () => {
   test("registers McpExplorer (callable and .mount) and mounts into an element", async () => {
@@ -74,38 +102,38 @@ describe("global mount API", () => {
     );
   });
 
-  test("execEnabled: true enables and locks tool execution", async () => {
+  test("execEnabled: true enables tool execution (no in-app toggle)", async () => {
     await import("../src/Main.res.mjs");
     await act(async () => {
       globalThis.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer", execEnabled: true });
     });
 
     const container = document.getElementById("mcp-explorer");
-    await waitFor(() => execCheckbox(container) !== null);
-    expect(execCheckbox(container).checked).toBe(true);
-    expect(execCheckbox(container).disabled).toBe(true);
+    await openTools(container);
+    expect(execCheckbox(container)).toBeNull();
+    expect(container.querySelector("fieldset.tryit-fieldset").disabled).toBe(false);
   });
 
-  test("execEnabled: false disables and locks tool execution", async () => {
+  test("execEnabled: false disables tool execution and explains why", async () => {
     await import("../src/Main.res.mjs");
     await act(async () => {
       globalThis.McpExplorer({ endpoint: "/mcp", domId: "root", execEnabled: false });
     });
 
     const container = document.getElementById("root");
-    await waitFor(() => execCheckbox(container) !== null);
-    expect(execCheckbox(container).checked).toBe(false);
-    expect(execCheckbox(container).disabled).toBe(true);
+    await openTools(container);
+    expect(container.querySelector("fieldset.tryit-fieldset").disabled).toBe(true);
+    expect(container.textContent).toContain("Tool execution is disabled");
   });
 
-  test("omitting execEnabled leaves the toggle user-changeable", async () => {
+  test("omitting execEnabled falls back to the build default (no toggle rendered)", async () => {
     await import("../src/Main.res.mjs");
     await act(async () => {
       globalThis.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer" });
     });
 
     const container = document.getElementById("mcp-explorer");
-    await waitFor(() => execCheckbox(container) !== null);
-    expect(execCheckbox(container).disabled).toBe(false);
+    await waitFor(() => container.querySelector(".config-bar") !== null);
+    expect(execCheckbox(container)).toBeNull();
   });
 });

@@ -7,9 +7,9 @@
 //   window.McpExplorer("/mcp")            // shorthand: first arg is the domId
 //   window.McpExplorer.mount({ ... })     // same function
 //
-// `execEnabled` (optional boolean) forces the "Enable execution" state and locks
-// the toolbar toggle when supplied. When omitted the build-time default is used
-// (on in `vite dev`, off in production) and the toggle stays user-changeable.
+// `execEnabled` (optional boolean) turns tool execution on or off for this
+// mount. When omitted the build-time default is used (on in `vite dev`, off in
+// production). It is fixed for the lifetime of the mount.
 // Returns `{ unmount }` so callers can tear the explorer down.
 
 %%raw(`import "./styles.css"`)
