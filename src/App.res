@@ -1,11 +1,16 @@
 @react.component
-let make = (~initialEndpoint: string) => {
+let make = (~initialEndpoint: string, ~initialExecEnabled: option<bool>) => {
   let (endpoint, setEndpoint) = React.useState(() => initialEndpoint)
   let (refreshKey, setRefreshKey) = React.useState(() => 0)
   let (activeTab, setActiveTab) = React.useState(() => "Tools")
   let (selectedTool, setSelectedTool) = React.useState(() => None)
   let (selectedPrompt, setSelectedPrompt) = React.useState(() => None)
-  let (execEnabled, setExecEnabled) = React.useState(() => Config.execDefault)
+  // When the host supplies `execEnabled`, execution is forced to that value and
+  // the toolbar toggle is locked (disabled).
+  let execLocked = initialExecEnabled->Option.isSome
+  let (execEnabled, setExecEnabled) = React.useState(() =>
+    initialExecEnabled->Option.getOr(Config.execDefault)
+  )
   let discovery = UseDiscovery.use(endpoint, refreshKey)
 
   // Apply a view without touching history (used by popstate / push).
@@ -142,7 +147,11 @@ let make = (~initialEndpoint: string) => {
         onEndpointChange={value => setEndpoint(_ => value)}
         onRefresh
         execEnabled
-        onToggleExec={() => setExecEnabled(value => !value)}
+        execLocked
+        onToggleExec={() =>
+          if !execLocked {
+            setExecEnabled(value => !value)
+          }}
         loading
       />
     </header>

@@ -4,6 +4,7 @@ let make = (
   ~onEndpointChange: string => unit,
   ~onRefresh: unit => unit,
   ~execEnabled: bool,
+  ~execLocked: bool,
   ~onToggleExec: unit => unit,
   ~loading: bool,
 ) =>
@@ -20,8 +21,15 @@ let make = (
     <button className="btn" disabled=loading onClick={_ => onRefresh()}>
       {(loading ? "Refreshing…" : "Refresh")->React.string}
     </button>
-    <label className="toggle">
-      <input type_="checkbox" checked=execEnabled onChange={_ => onToggleExec()} />
+    <label
+      className="toggle"
+      title={execLocked ? "Execution is configured by the host" : ""}>
+      <input
+        type_="checkbox"
+        checked=execEnabled
+        disabled=execLocked
+        onChange={_ => onToggleExec()}
+      />
       <span> {"Enable execution"->React.string} </span>
     </label>
   </div>

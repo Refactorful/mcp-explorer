@@ -3,21 +3,26 @@
 //
 //   window.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer" })
 //   window.McpExplorer({ endpoint: "http://127.0.0.1:8080/mcp", domId: "root" })
+//   window.McpExplorer({ endpoint: "/mcp", execEnabled: true })
 //   window.McpExplorer("/mcp")            // shorthand: first arg is the domId
 //   window.McpExplorer.mount({ ... })     // same function
 //
+// `execEnabled` (optional boolean) forces the "Enable execution" state and locks
+// the toolbar toggle when supplied. When omitted the build-time default is used
+// (on in `vite dev`, off in production) and the toggle stays user-changeable.
 // Returns `{ unmount }` so callers can tear the explorer down.
 
 %%raw(`import "./styles.css"`)
 
 let normalizeConfig: 'config => {..} = %raw(`(function(config) {
   if (typeof config === "string") {
-    return { domId: config, endpoint: "/mcp" };
+    return { domId: config, endpoint: "/mcp", execEnabled: undefined };
   }
   var options = config || {};
   return {
     domId: options.domId || options.dom_id || "mcp-explorer",
     endpoint: options.endpoint || options.url || "/mcp",
+    execEnabled: typeof options.execEnabled === "boolean" ? options.execEnabled : undefined,
   };
 })`)
 
@@ -33,9 +38,12 @@ let mount = (config: 'config): {..} => {
   let normalized = normalizeConfig(config)
   let domId: string = normalized["domId"]
   let endpoint: string = normalized["endpoint"]
+  // `None` when the caller omitted `execEnabled`; App falls back to the
+  // build-time default.
+  let initialExecEnabled: option<bool> = normalized["execEnabled"]
   let container = getElement(domId)
   let root = ReactDOM.Client.createRoot(container)
-  ReactDOM.Client.Root.render(root, <App initialEndpoint=endpoint />)
+  ReactDOM.Client.Root.render(root, <App initialEndpoint=endpoint initialExecEnabled />)
   {"unmount": () => ReactDOM.Client.Root.unmount(root, ())}
 }
 

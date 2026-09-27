@@ -21,6 +21,25 @@ beforeEach(() => {
   );
 });
 
+const flush = async () => {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+};
+
+const waitFor = async (predicate, timeout = 2000) => {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    await flush();
+    if (predicate()) {
+      return;
+    }
+  }
+  throw new Error("timed out waiting for condition");
+};
+
+const execCheckbox = (container) => container.querySelector('input[type="checkbox"]');
+
 describe("global mount API", () => {
   test("registers McpExplorer (callable and .mount) and mounts into an element", async () => {
     await import("../src/Main.res.mjs");
@@ -53,5 +72,40 @@ describe("global mount API", () => {
     expect(() => globalThis.McpExplorer({ endpoint: "/mcp", domId: "does-not-exist" })).toThrow(
       /no element with id 'does-not-exist'/,
     );
+  });
+
+  test("execEnabled: true enables and locks tool execution", async () => {
+    await import("../src/Main.res.mjs");
+    await act(async () => {
+      globalThis.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer", execEnabled: true });
+    });
+
+    const container = document.getElementById("mcp-explorer");
+    await waitFor(() => execCheckbox(container) !== null);
+    expect(execCheckbox(container).checked).toBe(true);
+    expect(execCheckbox(container).disabled).toBe(true);
+  });
+
+  test("execEnabled: false disables and locks tool execution", async () => {
+    await import("../src/Main.res.mjs");
+    await act(async () => {
+      globalThis.McpExplorer({ endpoint: "/mcp", domId: "root", execEnabled: false });
+    });
+
+    const container = document.getElementById("root");
+    await waitFor(() => execCheckbox(container) !== null);
+    expect(execCheckbox(container).checked).toBe(false);
+    expect(execCheckbox(container).disabled).toBe(true);
+  });
+
+  test("omitting execEnabled leaves the toggle user-changeable", async () => {
+    await import("../src/Main.res.mjs");
+    await act(async () => {
+      globalThis.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer" });
+    });
+
+    const container = document.getElementById("mcp-explorer");
+    await waitFor(() => execCheckbox(container) !== null);
+    expect(execCheckbox(container).disabled).toBe(false);
   });
 });

@@ -51,7 +51,8 @@ The distribution builds two artifacts:
   with a back control.
 - Prompts tab is hidden when the server does not advertise the capability.
 - Execution is behind a toolbar toggle: **on in `vite dev`, off in production
-  bundles**.
+  bundles**. A host can force the state (and lock the toggle) per mount with the
+  `execEnabled` config option.
 
 ## Global mount API (swagger-style)
 
@@ -63,13 +64,18 @@ handle:
 const viewer = window.McpExplorer({
   endpoint: "http://127.0.0.1:8080/mcp", // or a same-origin path like "/mcp"
   domId: "mcp-explorer",
+  execEnabled: true, // optional: force execution and lock the toggle
 });
 // viewer.unmount();
 ```
 
 `domId` is the id of an empty container element; `endpoint` is the MCP URL to
 call. `dom_id`/`url` are accepted as aliases, `domId` defaults to `"mcp-explorer"`
-and `endpoint` defaults to `"/mcp"`. `window.McpExplorer.mount(config)` is the
+and `endpoint` defaults to `"/mcp"`. `execEnabled` is an optional boolean that
+forces the state of the "Enable execution" toggle and locks it (the checkbox is
+disabled, so end users cannot change it); when omitted the build-time default
+applies (on in `vite dev`, off in production) and the toggle stays user-changeable.
+`window.McpExplorer.mount(config)` is the
 same function, and `window.McpExplorer("/mcp")` is a shorthand where the string is
 the `domId`.
 
