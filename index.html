@@ -3,17 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MCP Viewer</title>
+    <title>MCP Explorer</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/Main.res.mjs"></script>
     <script>
-      // Standalone page: mount the viewer with an explicit endpoint. Embedded
-      // deployments call window.McpViewer({ endpoint, domId }) directly instead.
+      // Standalone page: mount the explorer with an explicit endpoint. Embedded
+      // deployments call window.McpExplorer({ endpoint, domId }) directly instead.
       (function () {
         function start() {
-          window.McpViewer({ endpoint: "/mcp", domId: "root" });
+          window.McpExplorer({ endpoint: "/mcp", domId: "root" });
         }
         if (document.readyState === "loading") {
           document.addEventListener("DOMContentLoaded", start);

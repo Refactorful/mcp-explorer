@@ -12,7 +12,7 @@ typed and decode errors are caught at the boundary instead of at render time.
 - **What:** a static SPA that talks JSON-RPC to Oxygen's `POST /mcp` endpoint.
 - **Where it runs:** served by the same Oxygen server (no CORS, no proxy, no CDN).
 - **How it ships:** compiled to a single self-contained HTML bundle vendored under
-  `data/mcpviewer/`, following the existing `data/dashboard` and Swagger/Redoc
+  `data/mcpexplorer/`, following the existing `data/dashboard` and Swagger/Redoc
   precedent (`src/autodoc.jl`, `src/core.jl:937-981`).
 - **Why ReScript:** the protocol (method names, required headers, `_meta`, result
   shapes, content-block variants) becomes a set of types with total decoders; the
@@ -63,7 +63,7 @@ and are the most common source of setup breakage.
 
 ```
 Browser (offline, same-origin)
-  GET {docspath}/mcp  ──► data/mcpviewer/index.html (inlined JS/CSS)
+  GET {docspath}/mcp  ──► data/mcpexplorer/index.html (inlined JS/CSS)
         │
         │  POST {prefix}{mcp_path}   JSON-RPC 2.0 (modern 2026-07-28)
         ▼
@@ -325,7 +325,7 @@ UX notes:
 
 ```json
 {
-  "name": "oxygen-mcp-viewer",
+  "name": "oxygen-mcp-explorer",
   "sources": [{ "dir": "src", "subdirs": true }],
   "package-specs": [{ "module": "esmodule", "in-source": true }],
   "suffix": ".res.mjs",
@@ -336,7 +336,7 @@ UX notes:
 
 - Dev: `rescript build -w` + `vite` (via `@jihchi/vite-plugin-rescript`).
 - Prod: `vite build` with `vite-plugin-singlefile` → one `index.html`.
-- Copy output to `data/mcpviewer/index.html`.
+- Copy output to `data/mcpexplorer/index.html`.
 
 Offline guarantee: no CDN, no external fonts; everything inlined. Verify by
 opening the built file with the network disabled.
@@ -347,16 +347,16 @@ opening the built file with the network disabled.
 
 Follows the Swagger/Redoc + dashboard patterns.
 
-1. **Vendor:** commit `data/mcpviewer/index.html`.
-2. **Constants:** add `MCP_VIEWER_VERSION = "mcpviewer"` (or reuse the literal)
+1. **Vendor:** commit `data/mcpexplorer/index.html`.
+2. **Constants:** add `MCP_EXPLORER_VERSION = "mcpexplorer"` (or reuse the literal)
    in `src/constants.jl`.
-3. **Render helper:** add `mcpviewerhtml(mcp_endpoint)` in a new
-   `src/mcpviewer.jl` (or `src/autodoc.jl`), modeled on `swaggerhtml`
+3. **Render helper:** add `mcpexplorerhtml(mcp_endpoint)` in a new
+   `src/mcpexplorer.jl` (or `src/autodoc.jl`), modeled on `swaggerhtml`
    (`autodoc.jl:830`):
 
    ```julia
-   function mcpviewerhtml(endpoint::String)::HTTP.Response
-       page = readstaticfile("mcpviewer/index.html")
+   function mcpexplorerhtml(endpoint::String)::HTTP.Response
+       page = readstaticfile("mcpexplorer/index.html")
        config = JSON.json(Dict("endpoint" => endpoint))
        page = replace(page, "/*__MCP_CONFIG__*/null", "/*__MCP_CONFIG__*/$config")
        return html(page)
@@ -364,7 +364,7 @@ Follows the Swagger/Redoc + dashboard patterns.
    ```
 
 4. **Route:** in `setupdocs` (`src/core.jl:937`), register
-   `register_internal(ctx, router, "GET", "$docspath/mcp", () -> mcpviewerhtml(join_url_path(ctx.service.prefix[], mcp_path)))`.
+   `register_internal(ctx, router, "GET", "$docspath/mcp", () -> mcpexplorerhtml(join_url_path(ctx.service.prefix[], mcp_path)))`.
    Route is mounted only when the MCP endpoint is mounted.
 5. **Injection:** the bundle ships with
    `<script>window.__OXYGEN_MCP__ = /*__MCP_CONFIG__*/null;</script>` and starts
@@ -393,8 +393,8 @@ viewer/
     components/{ConfigBar,Tabs,ToolList,ToolDetail,PromptList,PromptDetail,SchemaView,JsonEditor,ResultView,ContentView}.res
     styles.css
   test/{Codec_test.res,Mcp_test.res}
-data/mcpviewer/index.html          # committed build artifact
-src/mcpviewer.jl                   # mcpviewerhtml() + route wiring
+data/mcpexplorer/index.html          # committed build artifact
+src/mcpexplorer.jl                   # mcpexplorerhtml() + route wiring
 ```
 
 ---
@@ -425,7 +425,7 @@ src/mcpviewer.jl                   # mcpviewerhtml() + route wiring
   body contains the bundle marker; injected endpoint equals
   `prefix + mcp_path` for parametrized prefix/path combinations.
 - **Drift check (optional CI):** rebuild the bundle and assert the committed
-  `data/mcpviewer/index.html` is byte-identical to source output.
+  `data/mcpexplorer/index.html` is byte-identical to source output.
 - **Manual E2E:** run `demo/` MCP server, load viewer, exercise a tool and a
   prompt.
 
@@ -461,7 +461,7 @@ src/mcpviewer.jl                   # mcpviewerhtml() + route wiring
 ## 15. Open decisions
 
 1. **Exec toggle default:** on (dev convenience) vs off (safe-by-default).
-2. **Route name:** `{docspath}/mcp` vs a dedicated `{docspath}/mcp-viewer`.
+2. **Route name:** `{docspath}/mcp` vs a dedicated `{docspath}/mcp-explorer`.
 3. **Docs mirror:** also copy the bundle into `docs/mcp/` for the static site?
 4. **JSON layer:** native `dict{}` patterns vs a small combinator module vs
    `jzon`/`rescript-json-combinators` (check ReScript 12 compatibility first).

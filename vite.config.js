@@ -8,12 +8,12 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 const mcpDevTarget = process.env.MCP_DEV_TARGET ?? "http://127.0.0.1:8080";
 const mcpDevPath = process.env.MCP_DEV_PATH ?? "/mcp";
 
-// `__MCP_VIEWER_DEV__` lets the bundle default execution to on in `vite dev`
+// `__MCP_EXPLORER_DEV__` lets the bundle default execution to on in `vite dev`
 // and off in production builds.
 export default defineConfig(({ command }) => ({
   plugins: [viteSingleFile()],
   define: {
-    __MCP_VIEWER_DEV__: JSON.stringify(command === "serve"),
+    __MCP_EXPLORER_DEV__: JSON.stringify(command === "serve"),
   },
   server: {
     proxy: {

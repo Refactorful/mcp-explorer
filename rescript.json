@@ -1,5 +1,5 @@
 {
-  "name": "mcp-viewer",
+  "name": "mcp-explorer",
   "sources": [
     { "dir": "src", "subdirs": true },
     { "dir": "test", "subdirs": true, "type": "dev" }

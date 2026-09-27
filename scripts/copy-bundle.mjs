@@ -1,9 +1,9 @@
-// Copies the build artifacts into data/mcpviewer/ so Oxygen can serve them
+// Copies the build artifacts into data/mcpexplorer/ so Oxygen can serve them
 // from disk:
 //
-//   dist/index.html      -> data/mcpviewer/index.html   (standalone page)
-//   dist-lib/mcpviewer.js   -> data/mcpviewer/mcpviewer.js   (global mount)
-//   dist-lib/mcpviewer.css  -> data/mcpviewer/mcpviewer.css  (global mount)
+//   dist/index.html            -> data/mcpexplorer/index.html        (standalone page)
+//   dist-lib/mcpexplorer.js    -> data/mcpexplorer/mcpexplorer.js    (global mount)
+//   dist-lib/mcpexplorer.css   -> data/mcpexplorer/mcpexplorer.css   (global mount)
 //
 // Run via `npm run bundle` (build + copy).
 import { mkdirSync, copyFileSync, existsSync } from "node:fs";
@@ -11,12 +11,12 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const targetDir = resolve(here, "..", "data", "mcpviewer");
+const targetDir = resolve(here, "..", "data", "mcpexplorer");
 
 const files = [
   ["dist", "index.html"],
-  ["dist-lib", "mcpviewer.js"],
-  ["dist-lib", "mcpviewer.css"],
+  ["dist-lib", "mcpexplorer.js"],
+  ["dist-lib", "mcpexplorer.css"],
 ];
 
 mkdirSync(targetDir, { recursive: true });

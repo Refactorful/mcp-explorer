@@ -1,4 +1,4 @@
-# MCP Viewer
+# MCP Explorer
 
 A same-origin, offline-capable single-page viewer for **any MCP server**. It
 discovers and renders **tools** and **prompts** and can invoke them. The client
@@ -14,8 +14,8 @@ The distribution builds two artifacts:
 
 | Artifact | Purpose |
 | --- | --- |
-| `data/mcpviewer/mcpviewer.js` + `mcpviewer.css` | Self-contained IIFE exposing the `window.McpViewer` function. This is the swagger-style integration. |
-| `data/mcpviewer/index.html` | A standalone single-file page that mounts itself (handy for direct serving/debugging). |
+| `data/mcpexplorer/mcpexplorer.js` + `mcpexplorer.css` | Self-contained IIFE exposing the `window.McpExplorer` function. This is the swagger-style integration. |
+| `data/mcpexplorer/index.html` | A standalone single-file page that mounts itself (handy for direct serving/debugging). |
 
 ## What it does
 
@@ -60,35 +60,35 @@ a config object (like `SwaggerUIBundle({ ... })`) and returns an `{ unmount }`
 handle:
 
 ```js
-const viewer = window.McpViewer({
+const viewer = window.McpExplorer({
   endpoint: "http://127.0.0.1:8080/mcp", // or a same-origin path like "/mcp"
-  domId: "mcp-viewer",
+  domId: "mcp-explorer",
 });
 // viewer.unmount();
 ```
 
 `domId` is the id of an empty container element; `endpoint` is the MCP URL to
-call. `dom_id`/`url` are accepted as aliases, `domId` defaults to `"mcp-viewer"`
-and `endpoint` defaults to `"/mcp"`. `window.McpViewer.mount(config)` is the
-same function, and `window.McpViewer("/mcp")` is a shorthand where the string is
+call. `dom_id`/`url` are accepted as aliases, `domId` defaults to `"mcp-explorer"`
+and `endpoint` defaults to `"/mcp"`. `window.McpExplorer.mount(config)` is the
+same function, and `window.McpExplorer("/mcp")` is a shorthand where the string is
 the `domId`.
 
 ```html
-<div id="mcp-viewer"></div>
-<script src="/docs/mcp/mcpviewer.js"></script>
-<link rel="stylesheet" href="/docs/mcp/mcpviewer.css" />
+<div id="mcp-explorer"></div>
+<script src="/docs/mcp/mcpexplorer.js"></script>
+<link rel="stylesheet" href="/docs/mcp/mcpexplorer.css" />
 <script>
-  window.McpViewer({ endpoint: "/mcp", domId: "mcp-viewer" });
+  window.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer" });
 </script>
 ```
 
 A minimal Oxygen helper that mirrors `swaggerhtml` lives in
-[`integrations/oxygen/mcpviewer.jl`](integrations/oxygen/mcpviewer.jl):
+[`integrations/oxygen/mcpexplorer.jl`](integrations/oxygen/mcpexplorer.jl):
 
 ```julia
-function mcpviewerhtml(endpoint::String) :: HTTP.Response
-    viewerjs = readstaticfile("mcpviewer/mcpviewer.js")
-    viewerstyles = readstaticfile("mcpviewer/mcpviewer.css")
+function mcpexplorerhtml(endpoint::String) :: HTTP.Response
+    viewerjs = readstaticfile("mcpexplorer/mcpexplorer.js")
+    viewerstyles = readstaticfile("mcpexplorer/mcpexplorer.css")
 
     html("""
         <!DOCTYPE html>
@@ -96,14 +96,14 @@ function mcpviewerhtml(endpoint::String) :: HTTP.Response
         <head>
             <meta charset="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <title>MCP Viewer</title>
+            <title>MCP Explorer</title>
             <style>$viewerstyles</style>
         </head>
         <body>
-            <div id="mcp-viewer"></div>
+            <div id="mcp-explorer"></div>
             <script>$viewerjs</script>
             <script>
-                window.McpViewer({ endpoint: "$endpoint", domId: "mcp-viewer" });
+                window.McpExplorer({ endpoint: "$endpoint", domId: "mcp-explorer" });
             </script>
         </body>
         </html>
@@ -119,7 +119,7 @@ register_internal(
     router,
     "GET",
     "$docspath/mcp",
-    () -> mcpviewerhtml(join_url_path(ctx.service.prefix[], mcp_path)),
+    () -> mcpexplorerhtml(join_url_path(ctx.service.prefix[], mcp_path)),
 )
 ```
 
@@ -131,7 +131,7 @@ register_internal(
 <div id="root"></div>
 <script type="module" src="/src/Main.res.mjs"></script>
 <script>
-  window.McpViewer({ endpoint: "/mcp", domId: "root" });
+  window.McpExplorer({ endpoint: "/mcp", domId: "root" });
 </script>
 ```
 
@@ -149,7 +149,7 @@ npm install
 npm run res:watch      # terminal 1
 npm run dev            # terminal 2
 
-# Production artifacts -> data/mcpviewer/{mcpviewer.js,mcpviewer.css,index.html}
+# Production artifacts -> data/mcpexplorer/{mcpexplorer.js,mcpexplorer.css,index.html}
 npm run bundle
 
 # Unit tests (Vitest + an SSR smoke test)
@@ -178,7 +178,7 @@ MCP_DEV_TARGET=http://127.0.0.1:9090 npm run dev
 
 ```
 src/
-  Main.res                 browser entry: window.McpViewer({ ... }) mount API
+  Main.res                 browser entry: window.McpExplorer({ ... }) mount API
   App.res                  tab shell + discovery state
   Config.res               build-time dev/prod exec default
   Curl.res                 cURL export
@@ -201,7 +201,7 @@ test/
   app.smoke.test.mjs  app.navigation.test.mjs  main.mount.test.mjs
   schemaform.test.mjs  tooldetail.form.test.mjs  curl.test.mjs
 scripts/
-  copy-bundle.mjs          dist*/ -> data/mcpviewer/
+  copy-bundle.mjs          dist*/ -> data/mcpexplorer/
   validate-live.mjs        live transport smoke test
 vite.config.js             single-file HTML build
 vite.lib.config.js         IIFE global build

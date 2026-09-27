@@ -12,7 +12,7 @@ type t = {
   clientVersion: string,
 }
 
-let make = (~endpoint: string, ~clientName="mcp-viewer", ~clientVersion="0.1.0") => {
+let make = (~endpoint: string, ~clientName="mcp-explorer", ~clientVersion="0.1.0") => {
   endpoint,
   clientName,
   clientVersion,

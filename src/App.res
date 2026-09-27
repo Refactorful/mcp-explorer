@@ -134,7 +134,7 @@ let make = (~initialEndpoint: string) => {
   <div className="app">
     <header className="app-header">
       <div className="brand">
-        <h1> {"MCP Viewer"->React.string} </h1>
+        <h1> {"MCP Explorer"->React.string} </h1>
         <span className="subtitle"> {"MCP server inspector"->React.string} </span>
       </div>
       <ConfigBar

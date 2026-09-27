@@ -9,7 +9,7 @@ import * as Mcp from "../src/api/Mcp.res.mjs";
 import * as Protocol from "../src/api/Protocol.res.mjs";
 
 const endpoint = process.env.MCP_ENDPOINT ?? "http://127.0.0.1:8080/mcp";
-const client = Mcp.make(endpoint, "mcp-viewer-validator", "0.1.0");
+const client = Mcp.make(endpoint, "mcp-explorer-validator", "0.1.0");
 
 let failures = 0;
 

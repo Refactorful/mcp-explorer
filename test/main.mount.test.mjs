@@ -3,7 +3,7 @@ import { describe, test, expect, vi, beforeEach } from "vitest";
 import { act } from "react";
 
 beforeEach(() => {
-  document.body.innerHTML = '<div id="mcp-viewer"></div><div id="root"></div>';
+  document.body.innerHTML = '<div id="mcp-explorer"></div><div id="root"></div>';
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   globalThis.fetch = vi.fn(async () =>
     new Response(
@@ -22,18 +22,18 @@ beforeEach(() => {
 });
 
 describe("global mount API", () => {
-  test("registers McpViewer (callable and .mount) and mounts into an element", async () => {
+  test("registers McpExplorer (callable and .mount) and mounts into an element", async () => {
     await import("../src/Main.res.mjs");
 
-    expect(typeof globalThis.McpViewer).toBe("function");
-    expect(typeof globalThis.McpViewer.mount).toBe("function");
+    expect(typeof globalThis.McpExplorer).toBe("function");
+    expect(typeof globalThis.McpExplorer.mount).toBe("function");
 
     await act(async () => {
-      globalThis.McpViewer({ endpoint: "/mcp", domId: "mcp-viewer" });
+      globalThis.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer" });
     });
 
-    const container = document.getElementById("mcp-viewer");
-    expect(container.textContent).toContain("MCP Viewer");
+    const container = document.getElementById("mcp-explorer");
+    expect(container.textContent).toContain("MCP Explorer");
     expect(container.textContent).toContain("MCP endpoint");
   });
 
@@ -42,7 +42,7 @@ describe("global mount API", () => {
 
     let handle;
     await act(async () => {
-      handle = globalThis.McpViewer("mcp-viewer");
+      handle = globalThis.McpExplorer("mcp-explorer");
     });
 
     expect(typeof handle.unmount).toBe("function");
@@ -50,7 +50,7 @@ describe("global mount API", () => {
 
   test("mount throws a helpful error when the container is missing", async () => {
     await import("../src/Main.res.mjs");
-    expect(() => globalThis.McpViewer({ endpoint: "/mcp", domId: "does-not-exist" })).toThrow(
+    expect(() => globalThis.McpExplorer({ endpoint: "/mcp", domId: "does-not-exist" })).toThrow(
       /no element with id 'does-not-exist'/,
     );
   });

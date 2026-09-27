@@ -9,10 +9,10 @@ A same-origin, offline-capable single-page viewer for **any MCP server**
 form, invokes tools, and can be embedded into any host page. It has **no Oxygen
 dependency**; the MCP endpoint is passed in at mount time.
 
-Two build artifacts are committed under `data/mcpviewer/`:
+Two build artifacts are committed under `data/mcpexplorer/`:
 
-- `mcpviewer.js` + `mcpviewer.css` — self-contained IIFE exposing the
-  `window.McpViewer` function (the embeddable integration).
+- `mcpexplorer.js` + `mcpexplorer.css` — self-contained IIFE exposing the
+  `window.McpExplorer` function (the embeddable integration).
 - `index.html` — standalone single-file page that mounts itself.
 
 ## Commands
@@ -27,7 +27,7 @@ npm test                                             # rescript build + vitest
 npm run validate:live                                # live transport smoke test
 MCP_ENDPOINT=http://127.0.0.1:8080/mcp npm run validate:live
 
-npm run bundle                                       # build both + copy to data/mcpviewer
+npm run bundle                                       # build both + copy to data/mcpexplorer
 npx vite build --config vite.lib.config.js           # lib only
 ```
 
@@ -41,9 +41,9 @@ Tests import the compiled `.res.mjs` files, not the sources.
 
 ```
 src/
-  Main.res                 browser entry: window.McpViewer({ ... }) mount API
+  Main.res                 browser entry: window.McpExplorer({ ... }) mount API
   App.res                  tab shell + discovery state + master-detail split
-  Config.res               build-time dev/prod exec default (__MCP_VIEWER_DEV__)
+  Config.res               build-time dev/prod exec default (__MCP_EXPLORER_DEV__)
   Curl.res                 cURL export (resolves relative endpoint to origin)
   History.res              in-app navigation (History API bindings)
   UseDiscovery.res         discover + tools + prompts loading hook
@@ -56,7 +56,7 @@ scripts/{copy-bundle,validate-live}.mjs
 vite.config.js             single-file HTML build
 vite.lib.config.js         IIFE global build
 integrations/oxygen/       reference Julia helper (example host)
-data/mcpviewer/            committed build artifacts
+data/mcpexplorer/            committed build artifacts
 ```
 
 `rescript.json`: `sources` = `src` + `test` (dev), `package-specs` esmodule
@@ -117,7 +117,7 @@ Use `%raw` / `@val` for globals and DOM:
 
 ```rescript
 let getElement: string => 'element = %raw(`(function(id) { ... })`)
-@val external isDevBuild: bool = "__MCP_VIEWER_DEV__"
+@val external isDevBuild: bool = "__MCP_EXPLORER_DEV__"
 @get external state: popStateEvent => nullable<{..}> = "state"
 ```
 
@@ -146,28 +146,28 @@ let getElement: string => 'element = %raw(`(function(id) { ... })`)
 - **Library mode does not replace `process.env.NODE_ENV`.** Without
   `define: { "process.env.NODE_ENV": JSON.stringify("production") }` in
   `vite.lib.config.js`, the full React **development** build (all the dev
-  warnings) is bundled (609 KB vs 220 KB). Both define `__MCP_VIEWER_DEV__`.
+  warnings) is bundled (609 KB vs 220 KB). Both define `__MCP_EXPLORER_DEV__`.
 - The IIFE `build.lib.name` becomes a global `var`. Keep it **distinct** from
-  the public global (`McpViewerBundle` vs `McpViewer`) so it cannot clobber the
+  the public global (`McpExplorerBundle` vs `McpExplorer`) so it cannot clobber the
   callable mount function.
 - Exposing a callable global with a property (swagger-style):
 
   ```rescript
   let withMountAlias: 'a => {..} = %raw(`(function(fn){ fn.mount = fn; return fn; })`)
-  register("McpViewer", withMountAlias(mount))   // window.McpViewer({...}) and .mount(...)
+  register("McpExplorer", withMountAlias(mount))   // window.McpExplorer({...}) and .mount(...)
   ```
 
 - **CSS must be imported from JS** (`%%raw("import \"./styles.css\"")` in
   `Main.res`), otherwise the lib build emits no CSS. The HTML build inlines it
   via `vite-plugin-singlefile`.
 - `.gitignore` ignores `*.res.mjs`, `lib/`, `dist/`, `dist-lib/`. The committed
-  artifacts are only under `data/mcpviewer/`.
+  artifacts are only under `data/mcpexplorer/`.
 
 ## Testing
 
 - Vitest imports compiled `.res.mjs`. `vitest.config.js` sets
   `test.include: ["test/**/*_test.res.mjs", "test/**/*.test.mjs"]` and defines
-  `__MCP_VIEWER_DEV__`.
+  `__MCP_EXPLORER_DEV__`.
 - `.res` unit tests use the bindings in `test/Vitest.res` (`describe`, `test`,
   `expect(...)->toBe/toEqual/toBeTruthy`).
 - DOM tests use a per-file pragma `// @vitest-environment jsdom`, `act` from
@@ -224,11 +224,11 @@ invalid value. Keep that behavior.
 
 ## Distribution / mount API
 
-- `window.McpViewer({ endpoint, domId })` (aliases `url`, `dom_id`; defaults
-  `"/mcp"`, `"mcp-viewer"`), returns `{ unmount }`. `window.McpViewer.mount(...)`
-  is the same function; `window.McpViewer("/mcp")` uses the string as `domId`.
+- `window.McpExplorer({ endpoint, domId })` (aliases `url`, `dom_id`; defaults
+  `"/mcp"`, `"mcp-explorer"`), returns `{ unmount }`. `window.McpExplorer.mount(...)`
+  is the same function; `window.McpExplorer("/mcp")` uses the string as `domId`.
 - No injected globals. The standalone `index.html` mounts itself by calling the
-  same API; embedded hosts do `window.McpViewer({ endpoint, domId })`.
+  same API; embedded hosts do `window.McpExplorer({ endpoint, domId })`.
 - cURL export must be absolute: `Curl.absolute` prefixes `window.location.origin`
   for relative endpoints.
 
@@ -262,7 +262,7 @@ invalid value. Keep that behavior.
    signals).
 2. `npm test` (all tests, including DOM/SSR).
 3. `npm run validate:live` against `http://127.0.0.1:8080/mcp`.
-4. `npm run bundle` to refresh `data/mcpviewer/*` and eyeball the diff.
+4. `npm run bundle` to refresh `data/mcpexplorer/*` and eyeball the diff.
 5. Keep the human-facing docs (`README.md`) in sync with behavior changes.
 
 Do not commit unless asked.
