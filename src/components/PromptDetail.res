@@ -1,8 +1,20 @@
 @react.component
-let make = (~prompt: Protocol.prompt, ~endpoint: string, ~onBack: unit => unit) => {
-  let (values, setValues) = React.useState(() =>
-    prompt.arguments->Array.map(argument => (argument.name, ""))
-  )
+let make = (
+  ~prompt: Protocol.prompt,
+  ~endpoint: string,
+  ~onBack: unit => unit,
+  ~reopen: option<Message.reopen>,
+) => {
+  // A reopened `prompts/get` seeds the inputs with the same argument values.
+  let initialValues = prompt.arguments->Array.map(argument => {
+    let value = switch reopen {
+    | Some({Message.message}) =>
+      message->Message.promptArgument(argument.name)->Option.getOr("")
+    | None => ""
+    }
+    (argument.name, value)
+  })
+  let (values, setValues) = React.useState(() => initialValues)
   let (state, setState) = React.useState(() => Protocol.Idle)
 
   let valueOf = name =>

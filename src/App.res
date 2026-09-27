@@ -9,6 +9,12 @@ let make = (
   let (activeTab, setActiveTab) = React.useState(() => "Tools")
   let (selectedTool, setSelectedTool) = React.useState(() => None)
   let (selectedPrompt, setSelectedPrompt) = React.useState(() => None)
+  let (messages, setMessages) = React.useState(() => MessageStore.all())
+  let (messagesOpen, setMessagesOpen) = React.useState(() => true)
+  // Set when a history entry is clicked: which message to replay into a detail
+  // pane, plus a nonce that forces the pane to remount and re-apply the inputs.
+  let (reopen, setReopen) = React.useState(() => (None: option<Message.reopen>))
+  let (reopenNonce, setReopenNonce) = React.useState(() => 0)
   // Execution is fixed for the lifetime of the mount: it is either forced by the
   // host via `execEnabled`, or falls back to the build-time default. There is no
   // in-app toggle; hosts control it when they mount the viewer.
@@ -18,9 +24,17 @@ let make = (
   let endpointEditable = initialEndpointEditable->Option.getOr(true)
   let discovery = UseDiscovery.use(endpoint, refreshKey)
 
+  // Keep the sidebar in sync with the transport's message log.
+  React.useEffect0(() => {
+    let unsubscribe = MessageStore.subscribe(() => setMessages(_ => MessageStore.all()))
+    Some(unsubscribe)
+  })
+
   // Apply a view without touching history (used by popstate / push).
   let applyView = (view: History.view) => {
     setActiveTab(_ => view.tab)
+    // Any normal navigation drops a pending reopen.
+    setReopen(_ => None)
     switch view.tab {
     | "Prompts" =>
       setSelectedTool(_ => None)
@@ -34,6 +48,39 @@ let make = (
   let navigate = (view: History.view) => {
     applyView(view)
     History.push(view)
+  }
+
+  // Reopen a logged call in the matching detail pane with the same inputs.
+  let onReopen = (message: Message.t) => {
+    let nonce = reopenNonce + 1
+    setReopenNonce(_ => nonce)
+    switch message.Message.method {
+    | Protocol.ToolsCall =>
+      switch message.Message.name {
+      | Some(name) => navigate({tab: "Tools", name: Some(name)})
+      | None => ()
+      }
+    | Protocol.PromptsGet =>
+      switch message.Message.name {
+      | Some(name) => navigate({tab: "Prompts", name: Some(name)})
+      | None => ()
+      }
+    | _ => ()
+    }
+    setReopen(_ => Some({Message.nonce, message}))
+  }
+
+  // Send a fresh copy of a logged request; the transport logs the new attempt.
+  let onReplay = (message: Message.t) => {
+    let client = Mcp.make(~endpoint)
+    let run = async () =>
+      await Mcp.replay(
+        client,
+        ~method=message.Message.method,
+        ~name=message.Message.name,
+        ~params=message.Message.params,
+      )
+    run()->ignore
   }
 
   // Seed a "home" entry so the back button has somewhere to return to, and
@@ -101,10 +148,21 @@ let make = (
         prompts->Array.find(prompt => prompt.name == name)
       ) {
       | Some(prompt) =>
+        let promptReopen = switch reopen {
+        | Some(r)
+          if r.message.method == Protocol.PromptsGet && r.message.name == Some(prompt.name) =>
+          Some(r)
+        | _ => None
+        }
+        let detailKey = switch promptReopen {
+        | Some(r) => prompt.name ++ "#" ++ r.nonce->Int.toString
+        | None => prompt.name
+        }
         <PromptDetail
-          key={prompt.name}
+          key=detailKey
           prompt
           endpoint
+          reopen=promptReopen
           onBack={() => History.back()}
         />
       | None => emptyDetail("prompt")
@@ -112,11 +170,21 @@ let make = (
     } else {
       switch selectedTool->Option.flatMap(name => tools->Array.find(tool => tool.name == name)) {
       | Some(tool) =>
+        let toolReopen = switch reopen {
+        | Some(r) if r.message.method == Protocol.ToolsCall && r.message.name == Some(tool.name) =>
+          Some(r)
+        | _ => None
+        }
+        let detailKey = switch toolReopen {
+        | Some(r) => tool.name ++ "#" ++ r.nonce->Int.toString
+        | None => tool.name
+        }
         <ToolDetail
-          key={tool.name}
+          key=detailKey
           tool
           endpoint
           execEnabled
+          reopen=toolReopen
           onBack={() => History.back()}
         />
       | None => emptyDetail("tool")
@@ -141,20 +209,40 @@ let make = (
     </div>
   }
 
+  let messagesToggleLabel =
+    messagesOpen ? "Hide messages" : "Messages (" ++ messages->Array.length->Int.toString ++ ")"
+
   <div className="app">
     <header className="app-header">
       <div className="brand">
         <h1> {"MCP Explorer"->React.string} </h1>
         <span className="subtitle"> {"MCP server inspector"->React.string} </span>
       </div>
-      <ConfigBar
-        endpoint
-        onEndpointChange={value => setEndpoint(_ => value)}
-        endpointLocked={!endpointEditable}
-        onRefresh
-        loading
-      />
+      <div className="app-header-actions">
+        <ConfigBar
+          endpoint
+          onEndpointChange={value => setEndpoint(_ => value)}
+          endpointLocked={!endpointEditable}
+          onRefresh
+          loading
+        />
+        <button
+          className="btn messages-toggle"
+          onClick={_ => setMessagesOpen(current => !current)}>
+          {messagesToggleLabel->React.string}
+        </button>
+      </div>
     </header>
-    {body}
+    <div className={messagesOpen ? "app-body with-messages" : "app-body"}>
+      <div className="app-main"> {body} </div>
+      {messagesOpen
+        ? <MessagesPanel
+            messages
+            onClear={() => MessageStore.clear()}
+            onReplay
+            onReopen
+          />
+        : React.null}
+    </div>
   </div>
 }

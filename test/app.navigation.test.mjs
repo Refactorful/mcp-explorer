@@ -4,6 +4,7 @@ import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import * as App from "../src/App.res.mjs";
+import * as MessageStore from "../src/MessageStore.res.mjs";
 
 const response = (result) =>
   new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), {
@@ -15,6 +16,7 @@ beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   document.body.innerHTML = '<div id="host"></div>';
   window.history.replaceState(null, "", "/");
+  MessageStore.clear();
 
   globalThis.fetch = vi.fn(async (_url, init) => {
     const method = JSON.parse(init.body).method;
@@ -103,5 +105,77 @@ describe("App master-detail navigation", () => {
     await waitFor(() => container.querySelector(".empty-detail") !== null);
     expect(container.querySelector(".item-list")).not.toBeNull();
     expect(container.querySelector(".detail-header")).toBeNull();
+  });
+
+  test("lists every call in the Messages sidebar and can collapse it", async () => {
+    const container = document.getElementById("host");
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        React.createElement(App.make, {
+          initialEndpoint: "/mcp",
+          initialExecEnabled: undefined,
+          initialEndpointEditable: undefined,
+        }),
+      );
+    });
+
+    // Discovery itself is logged: server/discover then tools/list.
+    await waitFor(() => container.querySelectorAll(".message-item").length >= 2);
+    expect(container.querySelector(".messages-panel")).not.toBeNull();
+    expect(container.textContent).toContain("TOOLS/LIST");
+    expect(container.textContent).toContain("SERVER/DISCOVER");
+    expect(container.textContent).toContain("CLIENT");
+
+    // Collapse hides the column; the toggle brings it back.
+    await act(async () => {
+      container
+        .querySelector(".messages-toggle")
+        .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+    expect(container.querySelector(".messages-panel")).toBeNull();
+    await act(async () => {
+      container
+        .querySelector(".messages-toggle")
+        .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+    expect(container.querySelector(".messages-panel")).not.toBeNull();
+  });
+
+  test("clicking a logged tool call reopens the tool with the same inputs", async () => {
+    const container = document.getElementById("host");
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        React.createElement(App.make, {
+          initialEndpoint: "/mcp",
+          initialExecEnabled: true,
+          initialEndpointEditable: undefined,
+        }),
+      );
+    });
+    await waitFor(() => container.querySelector(".item") !== null);
+
+    // Simulate a previously captured tools/call for `add`.
+    await act(async () => {
+      MessageStore.start(undefined, "ToolsCall", "add", { arguments: { a: 3, b: 4 } }, {}, Date.now());
+    });
+    await waitFor(() => container.querySelector(".message-main") !== null);
+
+    await act(async () => {
+      container
+        .querySelector(".message-main")
+        .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+
+    await waitFor(() => container.querySelector(".detail-header h2") !== null);
+    expect(container.querySelector(".detail-header h2").textContent).toBe("add");
+    const values = [...container.querySelectorAll(".schema-form input")].map(
+      (input) => input.value,
+    );
+    expect(values).toContain("3");
+    expect(values).toContain("4");
   });
 });

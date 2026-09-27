@@ -1,9 +1,20 @@
 @react.component
-let make = (~tool: Protocol.tool, ~endpoint: string, ~execEnabled: bool, ~onBack: unit => unit) => {
-  let (args, setArgs) = React.useState(() => Schema.defaultsFromSchema(tool.inputSchema))
-  let (argsText, setArgsText) = React.useState(() =>
-    Schema.defaultsFromSchema(tool.inputSchema)->Schema.pretty
-  )
+let make = (
+  ~tool: Protocol.tool,
+  ~endpoint: string,
+  ~execEnabled: bool,
+  ~onBack: unit => unit,
+  ~reopen: option<Message.reopen>,
+) => {
+  // A reopened `tools/call` seeds the form with the same arguments it was sent
+  // with; a normal selection falls back to schema defaults.
+  let initialArgs = switch reopen {
+  | Some({Message.message}) =>
+    message->Message.toolArguments->Option.getOr(Schema.defaultsFromSchema(tool.inputSchema))
+  | None => Schema.defaultsFromSchema(tool.inputSchema)
+  }
+  let (args, setArgs) = React.useState(() => initialArgs)
+  let (argsText, setArgsText) = React.useState(() => initialArgs->Schema.pretty)
   let (mode, setMode) = React.useState(() => "form")
   let (parseError, setParseError) = React.useState(() => (None: option<string>))
   let (formValid, setFormValid) = React.useState(() => true)

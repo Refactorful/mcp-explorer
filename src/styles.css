@@ -716,3 +716,213 @@ body {
   gap: 4px;
   margin-bottom: 8px;
 }
+
+/* Header actions (endpoint + messages toggle). */
+
+.app-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+/* Main content plus the Messages sidebar. The sidebar lives outside the tab
+   panel so it persists across the Tools/Prompts tabs. */
+
+.app-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.app-body.with-messages {
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.app-main {
+  min-width: 0;
+}
+
+.messages-panel {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 12px 16px;
+  box-shadow: 0 1px 3px rgba(35, 39, 47, 0.06);
+}
+
+.messages-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.messages-head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.messages-head .btn {
+  margin-left: auto;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.message-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-item {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+  padding: 8px 10px;
+}
+
+.message-item.pending {
+  border-left-color: var(--warning);
+}
+
+.message-item.success {
+  border-left-color: var(--success);
+}
+
+.message-item.failure {
+  border-left-color: var(--danger);
+}
+
+.message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.message-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.message-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.message-time {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fg);
+}
+
+.message-direction {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  color: var(--success);
+  background: rgba(16, 150, 85, 0.1);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.message-duration {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.message-method {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  color: var(--accent-light-fg);
+  background: var(--accent-light);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.message-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.icon-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 5px 6px;
+}
+
+.icon-btn:hover {
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+
+.message-detail {
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.message-section h4 {
+  margin: 8px 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-muted);
+}
+
+.message-section .code-block {
+  max-height: 220px;
+}
+
+.message-uuid {
+  font-family: var(--mono);
+  font-size: 10px;
+  margin: 8px 0 0;
+  word-break: break-all;
+}
+
+@media (max-width: 1180px) {
+  .app-body.with-messages {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .messages-panel {
+    position: static;
+    max-height: none;
+  }
+}

@@ -78,8 +78,9 @@ let post = async (
   ~name: option<string>,
   ~params: JSON.t,
 ): result<JSON.t, Protocol.apiError> => {
-  let id = newId()
-  let body = envelope(~id, ~method, ~params, client)
+  let startedAt = Date.now()
+  let jsonRpcId = newId()
+  let body = envelope(~id=jsonRpcId, ~method, ~params, client)
   let headers = switch name {
   | Some(name) => headersFor(method)->Array.concat([("Mcp-Name", name)])
   | None => headersFor(method)
@@ -90,14 +91,17 @@ let post = async (
     body: Fetch.Body.string(JSON.stringify(body)),
   }
 
-  let fetched = try {
-    Ok(await Fetch.fetch(client.endpoint, init))
-  } catch {
-  | JsExn(e) =>
-    Error(Protocol.Transport(JsExn.message(e)->Option.getOr("network request failed")))
-  }
+  // Record the outbound request so the Messages sidebar can show and replay it.
+  let messageId = MessageStore.start(~method, ~name, ~params, ~request=body, ~startedAt)
 
-  switch fetched {
+  let result = switch (
+    try {
+      Ok(await Fetch.fetch(client.endpoint, init))
+    } catch {
+    | JsExn(e) =>
+      Error(Protocol.Transport(JsExn.message(e)->Option.getOr("network request failed")))
+    }
+  ) {
   | Error(_) as err => err
   | Ok(response) =>
     let bodyText = try {
@@ -125,6 +129,38 @@ let post = async (
       }
     }
   }
+
+  let durationMs = Date.now() -. startedAt
+  switch result {
+  | Ok(json) =>
+    MessageStore.finish(
+      messageId,
+      ~status=Message.Succeeded,
+      ~durationMs,
+      ~response=Some(json),
+      ~error=None,
+    )
+  | Error(err) =>
+    MessageStore.finish(
+      messageId,
+      ~status=Message.Failed,
+      ~durationMs,
+      ~response=None,
+      ~error=Some(Protocol.apiErrorToString(err)),
+    )
+  }
+  result
+}
+
+// Re-send a previously captured request (used by the Messages sidebar). The new
+// attempt is logged like any other request.
+let replay = async (
+  client: t,
+  ~method: Protocol.method,
+  ~name: option<string>,
+  ~params: JSON.t,
+): unit => {
+  let _ = await post(client, ~method, ~name, ~params)
 }
 
 let discover = async (client: t): result<Protocol.discoverResult, Protocol.apiError> => {

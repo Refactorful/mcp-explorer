@@ -4,4 +4,5 @@ let make: (
   ~endpoint: string,
   ~execEnabled: bool,
   ~onBack: unit => unit,
+  ~reopen: option<Message.reopen>,
 ) => React.element

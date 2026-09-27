@@ -49,6 +49,15 @@ The distribution builds two artifacts:
   selected tool/prompt renders beside it, the selection is reflected in history
   so browser back/forward work, and narrow screens collapse to a single pane
   with a back control.
+- **Messages sidebar:** a collapsible third column (outside the tabs, so it
+  persists across Tools/Prompts) logs every client→server request. Each row
+  shows the local 24-hour send time (timestamps are stored as UTC and converted
+  for display), direction, round-trip time in ms, and the wire method
+  (`TOOLS/CALL`, `PROMPTS/GET`, `TOOLS/LIST`, …) — the same record covers all
+  calls, not just tool calls. Clicking a tool/prompt call reopens it in the
+  detail pane with the same inputs; the replay button re-sends a fresh copy of
+  the request; expanding a row shows the raw request/response. Every request is
+  tagged with a v4 UUID for stable identification.
 - Prompts tab is hidden when the server does not advertise the capability.
 - Execution is **configured by the host at mount time**, not by an in-app
   toggle. It defaults to **on in `vite dev`, off in production bundles**, and a
@@ -206,23 +215,26 @@ src/
   Config.res               build-time dev/prod exec default
   Curl.res                 cURL export
   History.res              in-app navigation (History API bindings)
+  Message.res              logged-message type + time/uuid/display helpers
+  MessageStore.res         in-memory message log (subscribe/notify)
   UseDiscovery.res         discover + tools + prompts loading hook
   api/
     Protocol.res           wire types, content blocks, apiError, encoders
     Codec.res              total decoders with error paths
-    Mcp.res                typed transport over fetch
+    Mcp.res                typed transport over fetch (logs every request)
     Schema.res             JSON-Schema defaults + required fields
   JsonValue.res            keyed JSON get/set/remove (immutable updates)
   components/
     ConfigBar.res  Tabs.res  ToolList.res  ToolDetail.res
     SchemaForm.res  JsonControl.res
     PromptList.res PromptDetail.res  SchemaView.res  JsonEditor.res
-    ResultView.res ContentView.res
+    ResultView.res ContentView.res  MessagesPanel.res
   styles.css
 test/
-  Codec_test.res  Schema_test.res  Mcp_test.res  Vitest.res
+  Codec_test.res  Schema_test.res  Mcp_test.res  Message_test.res  Vitest.res
   app.smoke.test.mjs  app.navigation.test.mjs  main.mount.test.mjs
-  schemaform.test.mjs  tooldetail.form.test.mjs  curl.test.mjs
+  messages.panel.test.mjs  schemaform.test.mjs  tooldetail.form.test.mjs
+  curl.test.mjs
 scripts/
   copy-bundle.mjs          dist*/ -> bundle/mcpexplorer/
   validate-live.mjs        live transport smoke test
