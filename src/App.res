@@ -1,3 +1,21 @@
+// Decorative sidebar toggle glyph (a panel + a chevron that flips when open).
+// Kept as a plain helper so `make` stays the only React component in the module.
+let sidebarIcon = (isOpen: bool): React.element =>
+  <svg
+    viewBox="0 0 24 24"
+    width="18"
+    height="18"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    ariaHidden=true>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <line x1="15" y1="4" x2="15" y2="20" />
+    {isOpen ? <path d="M8 9l3 3-3 3" /> : <path d="M11 9l-3 3 3 3" />}
+  </svg>
+
 @react.component
 let make = (
   ~initialEndpoint: string,
@@ -11,6 +29,9 @@ let make = (
   let (selectedPrompt, setSelectedPrompt) = React.useState(() => None)
   let (messages, setMessages) = React.useState(() => MessageStore.all())
   let (messagesOpen, setMessagesOpen) = React.useState(() => true)
+  // Number of messages already seen while the sidebar was open; the badge shows
+  // the difference when it is collapsed.
+  let (lastRead, setLastRead) = React.useState(() => 0)
   // Set when a history entry is clicked: which message to replay into a detail
   // pane, plus a nonce that forces the pane to remount and re-apply the inputs.
   let (reopen, setReopen) = React.useState(() => (None: option<Message.reopen>))
@@ -101,6 +122,16 @@ let make = (
     setSelectedPrompt(_ => None)
     History.replace({tab: activeTab, name: None})
     setRefreshKey(key => key + 1)
+  }
+
+  let toggleMessages = () => {
+    setLastRead(_ => messages->Array.length)
+    setMessagesOpen(current => !current)
+  }
+
+  let unread = {
+    let value = messagesOpen ? 0 : messages->Array.length - lastRead
+    value < 0 ? 0 : value
   }
 
   let body = switch discovery {
@@ -209,16 +240,13 @@ let make = (
     </div>
   }
 
-  let messagesToggleLabel =
-    messagesOpen ? "Hide messages" : "Messages (" ++ messages->Array.length->Int.toString ++ ")"
-
-  <div className="app">
+  <div className={messagesOpen ? "app" : "app collapsed"}>
     <header className="app-header">
-      <div className="brand">
-        <h1> {"MCP Explorer"->React.string} </h1>
-        <span className="subtitle"> {"MCP server inspector"->React.string} </span>
-      </div>
-      <div className="app-header-actions">
+      <div className="app-header-left">
+        <div className="brand">
+          <h1> {"MCP Explorer"->React.string} </h1>
+          <span className="subtitle"> {"MCP server inspector"->React.string} </span>
+        </div>
         <ConfigBar
           endpoint
           onEndpointChange={value => setEndpoint(_ => value)}
@@ -226,23 +254,25 @@ let make = (
           onRefresh
           loading
         />
-        <button
-          className="btn messages-toggle"
-          onClick={_ => setMessagesOpen(current => !current)}>
-          {messagesToggleLabel->React.string}
-        </button>
       </div>
+      <button
+        className="btn sidebar-toggle"
+        ariaLabel={messagesOpen ? "Hide messages" : "Show messages"}
+        ariaExpanded=messagesOpen
+        title={messagesOpen ? "Hide messages" : "Show messages"}
+        onClick={_ => toggleMessages()}>
+        {sidebarIcon(messagesOpen)}
+        {unread > 0 ? <span className="sidebar-badge" /> : React.null}
+      </button>
     </header>
-    <div className={messagesOpen ? "app-body with-messages" : "app-body"}>
-      <div className="app-main"> {body} </div>
-      {messagesOpen
-        ? <MessagesPanel
-            messages
-            onClear={() => MessageStore.clear()}
-            onReplay
-            onReopen
-          />
-        : React.null}
-    </div>
+    <div className="app-main"> {body} </div>
+    {messagesOpen
+      ? <MessagesPanel
+          messages
+          onClear={() => MessageStore.clear()}
+          onReplay
+          onReopen
+        />
+      : React.null}
   </div>
 }

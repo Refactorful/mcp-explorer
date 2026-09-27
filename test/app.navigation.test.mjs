@@ -131,16 +131,54 @@ describe("App master-detail navigation", () => {
     // Collapse hides the column; the toggle brings it back.
     await act(async () => {
       container
-        .querySelector(".messages-toggle")
+        .querySelector(".sidebar-toggle")
         .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     });
     expect(container.querySelector(".messages-panel")).toBeNull();
     await act(async () => {
       container
-        .querySelector(".messages-toggle")
+        .querySelector(".sidebar-toggle")
         .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     });
     expect(container.querySelector(".messages-panel")).not.toBeNull();
+  });
+
+  test("shows an unread dot when messages arrive while collapsed", async () => {
+    const container = document.getElementById("host");
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        React.createElement(App.make, {
+          initialEndpoint: "/mcp",
+          initialExecEnabled: undefined,
+          initialEndpointEditable: undefined,
+        }),
+      );
+    });
+    await waitFor(() => container.querySelector(".sidebar-toggle") !== null);
+
+    await act(async () => {
+      container
+        .querySelector(".sidebar-toggle")
+        .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+    expect(container.querySelector(".messages-panel")).toBeNull();
+    expect(container.querySelector(".sidebar-badge")).toBeNull();
+
+    // A message arrives while the column is hidden.
+    await act(async () => {
+      MessageStore.start(undefined, "ToolsList", undefined, {}, {}, Date.now());
+    });
+    expect(container.querySelector(".sidebar-badge")).not.toBeNull();
+
+    // Opening the column clears the badge.
+    await act(async () => {
+      container
+        .querySelector(".sidebar-toggle")
+        .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+    expect(container.querySelector(".sidebar-badge")).toBeNull();
   });
 
   test("clicking a logged tool call reopens the tool with the same inputs", async () => {

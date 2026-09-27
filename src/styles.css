@@ -44,17 +44,40 @@ body {
 
 .app {
   max-width: 1400px;
+  /* Fill the viewport so both columns end at the same bottom line (the page's
+     20px padding), matching the side padding. Long content scrolls inside a
+     column instead of growing the page. */
+  height: 100vh;
+  height: 100dvh;
   margin: 0 auto;
   padding: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.app.collapsed {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .app-header {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 20px;
+}
+
+/* Brand + endpoint live on the left of the top bar so the right column holds
+   only the sidebar; the sidebar toggle is the sole control on the far right. */
+.app-header-left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
 }
 
 .brand h1 {
@@ -717,38 +740,58 @@ body {
   margin-bottom: 8px;
 }
 
-/* Header actions (endpoint + messages toggle). */
+/* A standard panel glyph to collapse/expand the Messages column, with a dot
+   badge for messages that arrived while it was hidden. */
 
-.app-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
+.sidebar-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  line-height: 1;
 }
 
-/* Main content plus the Messages sidebar. The sidebar lives outside the tab
-   panel so it persists across the Tools/Prompts tabs. */
-
-.app-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
+.sidebar-toggle svg {
+  display: block;
 }
 
-.app-body.with-messages {
-  grid-template-columns: minmax(0, 1fr) 360px;
+.sidebar-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 1px solid var(--bg-elevated);
 }
+
+/* Main content plus the Messages column. The header spans the full top bar, so
+   the sidebar sits below it in the right column and never pushes the main pane
+   down. */
 
 .app-main {
+  grid-column: 1;
+  grid-row: 2;
   min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Stretch the tool card to the full column height so it ends at the page
+   padding, while its content scrolls inside `.app-main`. */
+.app-main > .panel {
+  min-height: 100%;
 }
 
 .messages-panel {
-  position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 40px);
-  overflow: auto;
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -757,6 +800,7 @@ body {
 }
 
 .messages-head {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -775,6 +819,9 @@ body {
 }
 
 .message-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -918,11 +965,23 @@ body {
 }
 
 @media (max-width: 1180px) {
-  .app-body.with-messages {
+  .app,
+  .app.collapsed {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    height: auto;
+    min-height: 100vh;
+  }
+  .app-main {
+    grid-row: auto;
+    overflow: visible;
+  }
+  .app-main > .panel {
+    min-height: 0;
   }
   .messages-panel {
-    position: static;
-    max-height: none;
+    grid-column: 1;
+    grid-row: auto;
+    max-height: calc(100vh - 120px);
   }
 }
