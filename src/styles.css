@@ -1,16 +1,24 @@
+/* Light palette mirroring the official MCP Inspector (see its `theme.ts`
+   tuples and `App.css` `--inspector-*` tokens). Grey body + white cards, an
+   `inspector` blue accent, green for success and red for errors. */
 :root {
-  --bg: #0f1115;
-  --bg-elevated: #171a21;
-  --bg-input: #0b0d11;
-  --border: #2a2f3a;
-  --border-strong: #3a4150;
-  --fg: #e6e9ef;
-  --fg-muted: #9aa4b2;
-  --accent: #6ea8fe;
-  --accent-strong: #3b82f6;
-  --danger: #f87171;
-  --danger-bg: #2a1416;
-  --success: #4ade80;
+  color-scheme: light;
+  --bg: #eef0f4; /* gray-1 — app body */
+  --bg-elevated: #ffffff; /* gray-white — cards */
+  --bg-input: #ffffff; /* inputs */
+  --bg-inset: #f7f8fa; /* gray-0 — inset/list/server cards */
+  --border: #e2e5ec; /* gray-3 — subtle border */
+  --border-strong: #cfd4de; /* gray-4 — default border */
+  --fg: #23272f; /* gray-9 */
+  --fg-muted: #515868; /* gray-7 */
+  --accent: #2f59e0; /* inspector-7 — filled light */
+  --accent-strong: #2f59e0; /* inspector-7 */
+  --accent-light: #eef3ff; /* inspector-0 — selected surface */
+  --accent-light-fg: #2749b8; /* inspector-8 */
+  --danger: #c62328; /* red-7 */
+  --danger-bg: #ffecec; /* red-0 */
+  --warning: #855f00; /* yellow-8 */
+  --success: #109655; /* green-6 */
   --radius: 8px;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
@@ -147,6 +155,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
+  box-shadow: 0 1px 3px rgba(35, 39, 47, 0.06);
 }
 
 .panel.muted {
@@ -252,7 +261,7 @@ body {
 }
 
 .pill {
-  background: var(--bg-input);
+  background: var(--bg-inset);
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 3px 10px;
@@ -276,7 +285,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: var(--bg-input);
+  background: var(--bg-inset);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 10px 12px;
@@ -285,11 +294,13 @@ body {
 }
 
 .item:hover {
-  border-color: var(--border-strong);
+  background: var(--accent-light);
+  border-color: var(--accent-light);
 }
 
 .item.selected {
-  border-color: var(--accent);
+  background: var(--accent-light);
+  border-color: var(--accent-light);
 }
 
 .item-name {
@@ -392,7 +403,7 @@ body {
 }
 
 .code-block {
-  background: var(--bg-input);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 10px 12px;
@@ -418,7 +429,7 @@ body {
 }
 
 .warning {
-  color: #fbbf24;
+  color: var(--warning);
   font-size: 12px;
 }
 
@@ -445,7 +456,7 @@ body {
 }
 
 .content-text {
-  background: var(--bg-input);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 10px 12px;
