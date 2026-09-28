@@ -1,4 +1,4 @@
-// Typed transport over Oxygen's `POST /mcp` endpoint.
+// Typed transport over an MCP server's `POST /mcp` endpoint.
 //
 // The wire method string is derived from a `Protocol.method` variant and the
 // `Mcp-Name` header is only produced where the protocol requires it, so the
@@ -45,6 +45,21 @@ let headersFor = (method: Protocol.method): array<(string, string)> => [
   ("MCP-Protocol-Version", protocolVersion),
   ("Mcp-Method", Protocol.wire(method)),
 ]
+
+// `Mcp-Name` values (tool/prompt names, resource URIs) must be plain ASCII HTTP
+// field values. Anything else — including values that already look like the
+// Base64 sentinel — is encoded as `=?base64?{utf8-base64}?=` per the spec.
+let encodeHeaderValue: string => string = %raw(`(function(value) {
+  var safe = value.length > 0 &&
+    /^[\x21-\x7E\t ]+$/.test(value) &&
+    value === value.trim() &&
+    !(value.indexOf("=?base64?") === 0 && value.slice(-2) === "?=");
+  if (safe) return value;
+  var bytes = new TextEncoder().encode(value);
+  var binary = "";
+  for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return "=?base64?" + btoa(binary) + "?=";
+})`)
 
 let envelope = (~id: int, ~method: Protocol.method, ~params: JSON.t, client: t): JSON.t => {
   let paramsDict = switch JSON.Decode.object(params) {
@@ -102,7 +117,7 @@ let post = async (
   let jsonRpcId = newId()
   let body = envelope(~id=jsonRpcId, ~method, ~params, client)
   let headers = switch name {
-  | Some(name) => headersFor(method)->Array.concat([("Mcp-Name", name)])
+  | Some(name) => headersFor(method)->Array.concat([("Mcp-Name", encodeHeaderValue(name))])
   | None => headersFor(method)
   }
   let init: Fetch.Request.init = {
@@ -263,6 +278,38 @@ let listTools = async (client: t): result<array<Protocol.tool>, Protocol.apiErro
 
 let listPrompts = async (client: t): result<array<Protocol.prompt>, Protocol.apiError> => {
   await request(client, ~method=Protocol.PromptsList, ~decoder=Codec.promptsResult)
+}
+
+let listResources = async (client: t): result<array<Protocol.resource>, Protocol.apiError> => {
+  await request(client, ~method=Protocol.ResourcesList, ~decoder=Codec.resourcesResult)
+}
+
+let listResourceTemplates = async (
+  client: t,
+): result<array<Protocol.resourceTemplate>, Protocol.apiError> => {
+  await request(
+    client,
+    ~method=Protocol.ResourcesTemplatesList,
+    ~decoder=Codec.resourceTemplatesResult,
+  )
+}
+
+// `resources/read` requires the `Mcp-Name` header to mirror `params.uri`.
+let readResource = async (
+  client: t,
+  ~uri: string,
+  ~onEvent: option<Stream.t => unit>=?,
+): result<Protocol.readResult, Protocol.apiError> => {
+  let params = Dict.make()
+  params->Dict.set("uri", JSON.Encode.string(uri))
+  await request(
+    client,
+    ~method=Protocol.ResourcesRead,
+    ~name=uri,
+    ~params=JSON.Encode.object(params),
+    ~onEvent?,
+    ~decoder=Codec.readResult,
+  )
 }
 
 let callTool = async (

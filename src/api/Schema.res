@@ -3,7 +3,7 @@
 // Schemas are intentionally untyped (`JSON.t`), so these helpers are lenient:
 // anything they don't understand yields a `null`/`{}` placeholder instead of
 // throwing. `$ref`s into `$defs`/`definitions` are resolved on a best-effort
-// basis, which is what Oxygen emits for nested record arguments.
+// basis, which is a common way to emit nested record arguments.
 
 let rec walkFrom = (node: JSON.t, segments: array<string>, i: int): option<JSON.t> =>
   if i >= Array.length(segments) {

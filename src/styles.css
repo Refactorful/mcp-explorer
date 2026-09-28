@@ -356,6 +356,14 @@ body {
   font-size: 12px;
 }
 
+.list-subhead {
+  margin: 16px 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-muted);
+}
+
 .detail-header {
   margin-bottom: 12px;
 }
@@ -518,9 +526,119 @@ body {
   margin: 0 0 8px;
 }
 
-.content-media img,
 .content-media audio {
   max-width: 100%;
+}
+
+/* Image preview: a checkerboard box shows transparent pixels, and the image
+   renders at natural size capped to the box. Clicking opens the modal below. */
+.image-preview {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #e6e8ed 25%, transparent 25%),
+    linear-gradient(-45deg, #e6e8ed 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e6e8ed 75%),
+    linear-gradient(-45deg, transparent 75%, #e6e8ed 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  cursor: zoom-in;
+}
+
+.image-preview img {
+  display: block;
+  max-width: 240px;
+  max-height: 240px;
+  min-width: 48px;
+  min-height: 48px;
+  object-fit: contain;
+  /* Keeps tiny images crisp when the min size above upscales them. */
+  image-rendering: pixelated;
+}
+
+.image-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgba(20, 22, 28, 0.72);
+}
+
+.image-modal-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 92vw;
+  max-height: 92vh;
+}
+
+.image-modal-img {
+  display: block;
+  max-width: 92vw;
+  max-height: 88vh;
+  min-width: 96px;
+  min-height: 96px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  border-radius: var(--radius);
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #e6e8ed 25%, transparent 25%),
+    linear-gradient(-45deg, #e6e8ed 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e6e8ed 75%),
+    linear-gradient(-45deg, transparent 75%, #e6e8ed 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.image-modal-close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  color: var(--fg);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.image-modal-close:hover {
+  background: var(--border);
+}
+
+.resource-content {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.resource-content-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .content-json {

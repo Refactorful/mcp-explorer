@@ -1,4 +1,4 @@
-// Live smoke test against a running Oxygen MCP server.
+// Live smoke test against a running MCP server.
 //
 //   node scripts/validate-live.mjs
 //   MCP_ENDPOINT=http://127.0.0.1:8080/mcp node scripts/validate-live.mjs
@@ -69,6 +69,37 @@ if (discover) {
     }
   } else {
     console.log("\n(server advertises no prompts capability; skipping prompts/list)");
+  }
+
+  if (discover.capabilities.resources) {
+    const resources = expectOk("resources/list", await Mcp.listResources(client));
+    // Templates are optional even under the resources capability.
+    const templates = await Mcp.listResourceTemplates(client);
+    if (templates.TAG === "Ok") {
+      log("resources/templates/list", templates._0);
+    } else {
+      log("resources/templates/list (unavailable)", Protocol.apiErrorToString(templates._0));
+    }
+    if (resources && resources.length > 0) {
+      const resource = resources[0];
+      const read = expectOk(
+        `resources/read ${resource.uri}`,
+        await Mcp.readResource(client, resource.uri),
+      );
+      if (read) {
+        for (const contents of read.contents) {
+          const kind = contents.text != null ? "text" : contents.blob != null ? "blob" : "empty";
+          console.log(
+            `  ${contents.uri} [${contents.mimeType ?? "unknown"}] ${kind} ` +
+              `${contents.text?.length ?? contents.blob?.length ?? 0} chars`,
+          );
+        }
+      }
+    } else {
+      console.log("\n(no resources registered; skipping resources/read)");
+    }
+  } else {
+    console.log("\n(server advertises no resources capability; skipping resources/list)");
   }
 }
 

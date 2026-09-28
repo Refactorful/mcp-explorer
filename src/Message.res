@@ -68,6 +68,7 @@ let methodLabel = (message: t) => message.method->Protocol.wire->String.toUpperC
 let isReopenable = (message: t) =>
   switch (message.method, message.name) {
   | (Protocol.ToolsCall, Some(_)) | (Protocol.PromptsGet, Some(_)) => true
+  | (Protocol.ResourcesRead, Some(_)) => true
   | _ => false
   }
 
@@ -107,5 +108,13 @@ let promptArgument = (message: t, name: string): option<string> =>
     ->JsonValue.getField("arguments")
     ->Option.flatMap(arguments => arguments->JsonValue.getField(name))
     ->Option.flatMap(JSON.Decode.string)
+  | _ => None
+  }
+
+// The `resources/read` URI, used to prefill the resource pane when reopening.
+let resourceUri = (message: t): option<string> =>
+  switch message.method {
+  | Protocol.ResourcesRead =>
+    message.params->JsonValue.getField("uri")->Option.flatMap(JSON.Decode.string)
   | _ => None
   }

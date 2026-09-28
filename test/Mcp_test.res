@@ -13,6 +13,9 @@ describe("Mcp headers and envelope", () => {
       Protocol.ToolsCall,
       Protocol.PromptsList,
       Protocol.PromptsGet,
+      Protocol.ResourcesList,
+      Protocol.ResourcesTemplatesList,
+      Protocol.ResourcesRead,
     ]
     methods->Array.forEach(method => {
       let headers = Mcp.headersFor(method)
@@ -25,9 +28,27 @@ describe("Mcp headers and envelope", () => {
     })
   })
 
-  test("Mcp-Name is not part of the derived headers (only added for call/get)", () => {
+  test("Mcp-Name is not part of the derived headers (only added for call/get/read)", () => {
     expect(headerValue(Mcp.headersFor(Protocol.ToolsList), "Mcp-Name"))->toEqual(None)
     expect(headerValue(Mcp.headersFor(Protocol.ToolsCall), "Mcp-Name"))->toEqual(None)
+    expect(headerValue(Mcp.headersFor(Protocol.ResourcesList), "Mcp-Name"))->toEqual(None)
+    expect(headerValue(Mcp.headersFor(Protocol.ResourcesRead), "Mcp-Name"))->toEqual(None)
+  })
+
+  test("header values pass through when they are plain ASCII", () => {
+    expect(Mcp.encodeHeaderValue("file:///notes/today.md"))->toBe("file:///notes/today.md")
+    expect(Mcp.encodeHeaderValue("get_weather"))->toBe("get_weather")
+    expect(Mcp.encodeHeaderValue("a b"))->toBe("a b")
+  })
+
+  test("header values use the base64 sentinel when they are not ASCII-safe", () => {
+    expect(Mcp.encodeHeaderValue("café.txt"))->toBe("=?base64?Y2Fmw6kudHh0?=")
+    expect(Mcp.encodeHeaderValue(" spaced "))->toBe("=?base64?IHNwYWNlZCA=?=")
+    expect(Mcp.encodeHeaderValue("line1\nline2"))->toBe("=?base64?bGluZTEKbGluZTI=?=")
+    // A plain value that looks like the sentinel must be encoded to stay unambiguous.
+    expect(Mcp.encodeHeaderValue("=?base64?literal?="))->toBe(
+      "=?base64?PT9iYXNlNjQ/bGl0ZXJhbD89?=",
+    )
   })
 
   test("envelope derives the method from the variant and injects _meta", () => {

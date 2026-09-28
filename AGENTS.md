@@ -5,9 +5,10 @@ Project notes for agents working in this repo. Read this before changing code.
 ## What this is
 
 A same-origin, offline-capable single-page viewer for **any MCP server**
-(ReScript + React). It discovers tools/prompts, renders a schema-driven "Try it"
-form, invokes tools, and can be embedded into any host page. It has **no host
-dependency**; the MCP endpoint is passed in at mount time.
+(ReScript + React). It discovers tools/prompts/resources, renders a
+schema-driven "Try it" form, invokes tools, reads resources, and can be
+embedded into any host page. It has **no host dependency**; the MCP endpoint is
+passed in at mount time.
 
 Three build artifacts are committed under `bundle/mcpexplorer/`:
 
@@ -51,7 +52,8 @@ src/
   History.res              in-app navigation (History API bindings)
   Message.res / MessageStore.res  transport message log + helpers
   Stream.res               SSE message type (notification/request/response)
-  UseDiscovery.res         discover + tools + prompts loading hook
+  ResourceTemplate.res     RFC 6570 URI-template parsing/substitution helpers
+  UseDiscovery.res         discover + tools + prompts + resources loading hook
   api/{Protocol,Codec,Mcp,Sse,Schema}.res
   JsonValue.res            keyed JSON get/set/remove (immutable updates)
   components/…             UI; one component per file (see React notes)
@@ -192,8 +194,8 @@ let getElement: string => 'element = %raw(`(function(id) { ... })`)
   matches the request shows up. Servers that keep the stream open are handled
   (the reader is cancelled once the response arrives). A stream that closes with
   no matching response is a `ProtocolMismatch`. JSON responses still take the
-  original single-body path. `ToolDetail` passes `onEvent` and renders the
-  events live in a "Stream" log before the final result.
+  original single-body path. `ToolDetail` and `ResourceDetail` pass `onEvent`
+  and render the events live in a shared `StreamLog` before the final result.
 - `params._meta.progressToken` is set to the request id so servers emit
   `notifications/progress`. `Mcp.envelope` derives it from `~id`.
 - Headers (exact):
@@ -203,8 +205,14 @@ let getElement: string => 'element = %raw(`(function(id) { ... })`)
   Accept: application/json, text/event-stream
   MCP-Protocol-Version: 2026-07-28
   Mcp-Method: <method-string>
-  Mcp-Name: <name>          # ONLY for tools/call, prompts/get
+  Mcp-Name: <name>          # for tools/call, resources/read, prompts/get
   ```
+
+- `Mcp-Name` mirrors `params.name` (`tools/call`, `prompts/get`) or `params.uri`
+  (`resources/read`). `Mcp.encodeHeaderValue` passes plain ASCII values through
+  and otherwise uses the spec's Base64 sentinel form `=?base64?{...}?=` (also
+  for values that already look like the sentinel), so non-ASCII names/URIs are
+  transmitted safely.
 
 - `params._meta` is required on every request:
   `io.modelcontextprotocol/protocolVersion`, `.../clientCapabilities`,
@@ -218,6 +226,11 @@ let getElement: string => 'element = %raw(`(function(id) { ... })`)
   but must not choke.
 - Content blocks dispatch on `"type"`; **unknown types become `Unknown(json)`**
   (forward-compatible) rather than failing the call.
+- Resources decode into typed records (`Codec.resourcesResult`,
+  `resourceTemplatesResult`, `readResult`); unknown result metadata (`nextCursor`,
+  `ttlMs`, `cacheScope`) is ignored. Resource subscriptions
+  (`subscriptions/listen` → `notifications/resources/updated`) are not
+  implemented; the Refresh button re-runs discovery instead.
 - `inputSchema` is intentionally `JSON.t`; never assume its shape.
 
 ### Schema defaults quirk (real bug we fixed)
@@ -274,6 +287,12 @@ invalid value. Keep that behavior.
   arguments that were filled in: blank/whitespace-only optional arguments are
   omitted (servers reject empty strings), and a whitespace-only required
   argument keeps the Get button disabled.
+- Resources tab is hidden unless `capabilities.resources`. It lists
+  `resources/list` entries by URI plus `resources/templates/list` entries.
+  Simple `{var}` templates build the read URI from per-variable inputs
+  (`ResourceTemplate.res`, percent-encoded); complex expressions or reopened
+  reads use a raw URI input. Reads render text, images/audio and binary
+  downloads, and the URI is mirrored into `Mcp-Name`.
 
 ## Workflow checklist
 

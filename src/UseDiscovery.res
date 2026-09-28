@@ -1,12 +1,14 @@
-// Loads server/discover plus tools and prompts for an endpoint.
+// Loads server/discover plus tools, prompts and resources for an endpoint.
 //
-// Prompts are only fetched when the server advertises the capability, so the
-// tab can be hidden without a second round trip.
+// Prompts and resources are only fetched when the server advertises the
+// capability, so their tabs can be hidden without a second round trip.
 
 type loaded = {
   discover: Protocol.discoverResult,
   tools: array<Protocol.tool>,
   prompts: array<Protocol.prompt>,
+  resources: array<Protocol.resource>,
+  resourceTemplates: array<Protocol.resourceTemplate>,
 }
 
 type state =
@@ -41,8 +43,24 @@ let use = (endpoint: string, refreshKey: int): state => {
           } else {
             []
           }
+          let resources = if discover.capabilities.resources {
+            switch await Mcp.listResources(client) {
+            | Ok(resources) => resources
+            | Error(_) => []
+            }
+          } else {
+            []
+          }
+          let resourceTemplates = if discover.capabilities.resources {
+            switch await Mcp.listResourceTemplates(client) {
+            | Ok(templates) => templates
+            | Error(_) => []
+            }
+          } else {
+            []
+          }
           if !cancelled.contents {
-            setState(_ => Loaded({discover, tools, prompts}))
+            setState(_ => Loaded({discover, tools, prompts, resources, resourceTemplates}))
           }
         }
       }

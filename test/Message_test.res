@@ -73,6 +73,28 @@ describe("Message", () => {
     expect(message->Message.promptArgument("missing"))->toBe(None)
   })
 
+  test("isReopenable accepts a named resources/read", () => {
+    let params = JSON.Encode.object(
+      Dict.fromArray([("uri", JSON.Encode.string("file:///a.txt"))]),
+    )
+    expect(
+      makeMessage(~method=Protocol.ResourcesRead, ~name=Some("file:///a.txt"), ~params)
+      ->Message.isReopenable,
+    )->toBe(true)
+    expect(
+      makeMessage(~method=Protocol.ResourcesRead, ~name=None, ~params)->Message.isReopenable,
+    )->toBe(false)
+  })
+
+  test("resourceUri extracts the resources/read uri", () => {
+    let params = JSON.Encode.object(
+      Dict.fromArray([("uri", JSON.Encode.string("file:///a.txt"))]),
+    )
+    let message = makeMessage(~method=Protocol.ResourcesRead, ~name=Some("file:///a.txt"), ~params)
+    expect(message->Message.resourceUri)->toBe(Some("file:///a.txt"))
+    expect(makeMessage(~params=argObject())->Message.resourceUri)->toBe(None)
+  })
+
   test("uuid produces a v4 uuid", () => {
     let id = Message.uuid()
     expect(String.length(id))->toBe(36)

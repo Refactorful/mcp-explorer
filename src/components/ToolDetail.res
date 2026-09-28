@@ -76,37 +76,7 @@ let make = (
     request()->ignore
   }
 
-  let renderStream = () =>
-    if events->Array.length == 0 {
-      React.null
-    } else {
-      <div className="stream-log">
-        <h3> {"Stream"->React.string} </h3>
-        <ul className="stream-list">
-          {events
-          ->Array.mapWithIndex((event, index) =>
-            <li
-              key={Int.toString(index)}
-              className={"stream-event " ++ Stream.kindClass(event.Stream.kind)}>
-              <div className="stream-line">
-                <span className="stream-time">
-                  {Message.formatTime(event.Stream.at)->React.string}
-                </span>
-                <span className="stream-kind">
-                  {Stream.kindLabel(event.Stream.kind)->React.string}
-                </span>
-                {switch event.Stream.method {
-                | Some(method) => <span className="stream-method"> {method->React.string} </span>
-                | None => React.null
-                }}
-              </div>
-              <JsonBlock value={event.Stream.payload} />
-            </li>
-          )
-          ->React.array}
-        </ul>
-      </div>
-    }
+  let renderStream = () => <StreamLog events />
 
   let jsonInvalid = mode == "json" && parseError->Option.isSome
   let runDisabled = !execEnabled || jsonInvalid

@@ -198,6 +198,63 @@ let callResult: t<Protocol.callResult> = (json, path) =>
     }
   )
 
+let resource: t<Protocol.resource> = (json, path) =>
+  objectOf(json, path, "resource")->Result.flatMap(dict =>
+    field(dict, "uri", string)->Result.flatMap(uri =>
+      field(dict, "name", string)->Result.flatMap(name =>
+        optField(dict, "title", string)->Result.flatMap(title =>
+          optField(dict, "description", string)->Result.flatMap(description =>
+            optField(dict, "mimeType", string)->Result.flatMap(mimeType =>
+              optField(dict, "size", float)->Result.map(size => {
+                Protocol.uri,
+                name,
+                title,
+                description,
+                mimeType,
+                size,
+              })
+            )
+          )
+        )
+      )
+    )
+  )
+
+let resourceTemplate: t<Protocol.resourceTemplate> = (json, path) =>
+  objectOf(json, path, "resource template")->Result.flatMap(dict =>
+    field(dict, "uriTemplate", string)->Result.flatMap(uriTemplate =>
+      field(dict, "name", string)->Result.flatMap(name =>
+        optField(dict, "title", string)->Result.flatMap(title =>
+          optField(dict, "description", string)->Result.flatMap(description =>
+            optField(dict, "mimeType", string)->Result.map(mimeType => {
+              Protocol.uriTemplate,
+              name,
+              title,
+              description,
+              mimeType,
+            })
+          )
+        )
+      )
+    )
+  )
+
+let resourceContents: t<Protocol.resourceContents> = (json, path) =>
+  objectOf(json, path, "resource contents")->Result.flatMap(dict =>
+    field(dict, "uri", string)->Result.flatMap(uri =>
+      optField(dict, "mimeType", string)->Result.flatMap(mimeType =>
+        optField(dict, "text", string)->Result.flatMap(text =>
+          optField(dict, "blob", string)->Result.map(blob => {
+            Protocol.uri,
+            mimeType,
+            text,
+            blob,
+          })
+        )
+      )
+    )
+  )
+
 let capability = (dict: dict<JSON.t>, name: string): bool =>
   switch dict->Dict.get(name) {
   | Some(JSON.Null) | None => false
@@ -207,6 +264,7 @@ let capability = (dict: dict<JSON.t>, name: string): bool =>
 let capabilities = (dict: dict<JSON.t>): Protocol.capabilities => {
   tools: capability(dict, "tools"),
   prompts: capability(dict, "prompts"),
+  resources: capability(dict, "resources"),
 }
 
 let discoverResult: t<Protocol.discoverResult> = (json, path) =>
@@ -218,6 +276,7 @@ let discoverResult: t<Protocol.discoverResult> = (json, path) =>
           capabilities: caps->Option.map(capabilities)->Option.getOr({
             tools: false,
             prompts: false,
+            resources: false,
           }),
           instructions,
         })
@@ -274,3 +333,16 @@ let toolsResult: t<array<Protocol.tool>> = (json, path) =>
 
 let promptsResult: t<array<Protocol.prompt>> = (json, path) =>
   listResult(json, path, "prompts", "prompts/list result", prompt)
+
+let resourcesResult: t<array<Protocol.resource>> = (json, path) =>
+  listResult(json, path, "resources", "resources/list result", resource)
+
+let resourceTemplatesResult: t<array<Protocol.resourceTemplate>> = (json, path) =>
+  listResult(json, path, "resourceTemplates", "resources/templates/list result", resourceTemplate)
+
+// Missing `contents` degrades to an empty array; unknown result metadata
+// (`ttlMs`, `cacheScope`, ...) is ignored by the field-based decoders.
+let readResult: t<Protocol.readResult> = (json, path) =>
+  listResult(json, path, "contents", "resources/read result", resourceContents)->Result.map(
+    contents => {Protocol.contents: contents},
+  )

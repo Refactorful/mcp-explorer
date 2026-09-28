@@ -58,6 +58,22 @@ let attachListSizing: unit => unit => unit = %raw(`function attachListSizing() {
 // Tools and prompts render through the same master list.
 let toItem = (name: string, description: option<string>): ItemList.item => {name, description}
 
+// Resources and templates list by URI/uriTemplate (the selection key) with a
+// human title as the description.
+let resourceItem = (
+  key: string,
+  name: string,
+  title: option<string>,
+  description: option<string>,
+): ItemList.item => {
+  let display = title->Option.getOr(name)
+  let text = switch description {
+  | Some(description) => display ++ " — " ++ description
+  | None => display
+  }
+  {name: key, description: Some(text)}
+}
+
 // The logged message to re-apply when `name` is reopened in a detail pane, if any.
 let reopenFor = (reopen: option<Message.reopen>, method: Protocol.method, name: string) =>
   switch reopen {
@@ -84,6 +100,7 @@ let make = (
   let (activeTab, setActiveTab) = React.useState(() => "Tools")
   let (selectedTool, setSelectedTool) = React.useState(() => None)
   let (selectedPrompt, setSelectedPrompt) = React.useState(() => None)
+  let (selectedResource, setSelectedResource) = React.useState(() => None)
   let (messages, setMessages) = React.useState(() => MessageStore.all())
   let (messagesOpen, setMessagesOpen) = React.useState(() => true)
   // Number of messages already seen while the sidebar was open; the badge shows
@@ -123,11 +140,17 @@ let make = (
     // Any normal navigation drops a pending reopen.
     setReopen(_ => None)
     switch view.tab {
+    | "Resources" =>
+      setSelectedTool(_ => None)
+      setSelectedPrompt(_ => None)
+      setSelectedResource(_ => view.name)
     | "Prompts" =>
       setSelectedTool(_ => None)
+      setSelectedResource(_ => None)
       setSelectedPrompt(_ => view.name)
     | _ =>
       setSelectedPrompt(_ => None)
+      setSelectedResource(_ => None)
       setSelectedTool(_ => view.name)
     }
   }
@@ -144,6 +167,7 @@ let make = (
     let tab = switch message.Message.method {
     | Protocol.ToolsCall => Some("Tools")
     | Protocol.PromptsGet => Some("Prompts")
+    | Protocol.ResourcesRead => Some("Resources")
     | _ => None
     }
     switch (tab, message.Message.name) {
@@ -182,6 +206,7 @@ let make = (
   let onRefresh = () => {
     setSelectedTool(_ => None)
     setSelectedPrompt(_ => None)
+    setSelectedResource(_ => None)
     History.replace({tab: activeTab, name: None})
     setRefreshKey(key => key + 1)
   }
@@ -206,23 +231,60 @@ let make = (
       <p className="muted"> {endpoint->React.string} </p>
       {Config.isDevBuild
         ? <p className="warning">
-            {"Dev tip: use the relative `/mcp` endpoint — Vite proxies it to the MCP server (MCP_DEV_TARGET). Absolute cross-origin URLs are rejected by Oxygen."->React.string}
+            {"Dev tip: use the relative `/mcp` endpoint — Vite proxies it to the MCP server (MCP_DEV_TARGET). Most MCP hosts reject cross-origin requests."->React.string}
           </p>
         : React.null}
     </div>
-  | UseDiscovery.Loaded({discover, tools, prompts}) =>
+  | UseDiscovery.Loaded({discover, tools, prompts, resources, resourceTemplates}) =>
     let showPrompts = discover.capabilities.prompts
-    let tabs = showPrompts ? ["Tools", "Prompts"] : ["Tools"]
+    let showResources = discover.capabilities.resources
+    let tabs =
+      ["Tools"]
+      ->Array.concat(showPrompts ? ["Prompts"] : [])
+      ->Array.concat(showResources ? ["Resources"] : [])
     let version = discover.supportedVersions->Array.get(0)->Option.getOr("")
     let isPrompts = activeTab == "Prompts" && showPrompts
-    let hasDetail = isPrompts ? selectedPrompt->Option.isSome : selectedTool->Option.isSome
+    let isResources = activeTab == "Resources" && showResources
+    let hasDetail = if isResources {
+      selectedResource->Option.isSome
+    } else if isPrompts {
+      selectedPrompt->Option.isSome
+    } else {
+      selectedTool->Option.isSome
+    }
 
     let emptyDetail = kind =>
       <div className="empty-detail muted">
         {("Select a " ++ kind ++ " from the list to inspect it.")->React.string}
       </div>
 
-    let listView = if isPrompts {
+    let listView = if isResources {
+      let resourceItems = resources->Array.map(resource =>
+        resourceItem(resource.uri, resource.name, resource.title, resource.description)
+      )
+      let templateItems = resourceTemplates->Array.map(template =>
+        resourceItem(template.uriTemplate, template.name, template.title, template.description)
+      )
+      <div>
+        <ItemList
+          items=resourceItems
+          empty="No resources registered."
+          selectedName=selectedResource
+          onSelect={name => navigate({tab: "Resources", name: Some(name)})}
+        />
+        {templateItems->Array.length > 0
+          ? <div>
+              <h3 className="list-subhead"> {"Resource templates"->React.string} </h3>
+              <ItemList
+                items=templateItems
+                empty=""
+                selectedName=selectedResource
+                onSelect={name => navigate({tab: "Resources", name: Some(name)})}
+              />
+            </div>
+          : React.null}
+      </div>
+    } else if isPrompts {
       <ItemList
         items={prompts->Array.map(prompt => toItem(prompt.name, prompt.description))}
         empty="No prompts registered."
@@ -238,7 +300,60 @@ let make = (
       />
     }
 
-    let detailView = if isPrompts {
+    let detailView = if isResources {
+      switch selectedResource {
+      | Some(key) =>
+        let resourceReopen = reopenFor(reopen, Protocol.ResourcesRead, key)
+        switch resources->Array.find(resource => resource.uri == key) {
+        | Some(resource) =>
+          <ResourceDetail
+            key={detailKey(key, resourceReopen)}
+            uri={resource.uri}
+            name={resource.name}
+            description={resource.description}
+            mimeType={resource.mimeType}
+            template=None
+            endpoint
+            reopen=resourceReopen
+            onBack={() => History.back()}
+          />
+        | None =>
+          switch resourceTemplates->Array.find(template => template.uriTemplate == key) {
+          | Some(template) =>
+            <ResourceDetail
+              key={detailKey(key, resourceReopen)}
+              uri=""
+              name={template.name}
+              description={template.description}
+              mimeType={template.mimeType}
+              template={Some(template.uriTemplate)}
+              endpoint
+              reopen=resourceReopen
+              onBack={() => History.back()}
+            />
+          | None =>
+            switch resourceReopen {
+            | Some(_) =>
+              // A logged read of a URI that is not in the current list (e.g. a
+              // template expansion) still opens read-only.
+              <ResourceDetail
+                key={detailKey(key, resourceReopen)}
+                uri=key
+                name=key
+                description=None
+                mimeType=None
+                template=None
+                endpoint
+                reopen=resourceReopen
+                onBack={() => History.back()}
+              />
+            | None => emptyDetail("resource")
+            }
+          }
+        }
+      | None => emptyDetail("resource")
+      }
+    } else if isPrompts {
       switch selectedPrompt->Option.flatMap(name =>
         prompts->Array.find(prompt => prompt.name == name)
       ) {

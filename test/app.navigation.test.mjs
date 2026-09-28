@@ -152,4 +152,91 @@ describe("App master-detail navigation", () => {
     expect(values).toContain("3");
     expect(values).toContain("4");
   });
+
+  test("hides the Resources tab when the capability is absent", async () => {
+    const container = await mount(
+      App.make,
+      {
+        initialEndpoint: "/mcp",
+        initialExecEnabled: undefined,
+        initialEndpointEditable: undefined,
+      },
+      document.getElementById("host"),
+    );
+    await waitFor(() => container.querySelector(".tabs") !== null);
+    const tabs = [...container.querySelectorAll(".tab")].map((tab) => tab.textContent);
+    expect(tabs).toEqual(["Tools"]);
+  });
+
+  test("shows resources and templates when the capability is advertised", async () => {
+    globalThis.fetch = vi.fn(async (_url, init) => {
+      const method = JSON.parse(init.body).method;
+      switch (method) {
+        case "server/discover":
+          return jsonResponse({
+            resultType: "complete",
+            supportedVersions: ["2026-07-28"],
+            capabilities: { tools: {}, resources: {} },
+          });
+        case "tools/list":
+          return jsonResponse({ tools: [] });
+        case "resources/list":
+          return jsonResponse({
+            resources: [
+              {
+                uri: "file:///readme.md",
+                name: "readme.md",
+                title: "Project readme",
+                description: "How to build",
+                mimeType: "text/markdown",
+              },
+            ],
+          });
+        case "resources/templates/list":
+          return jsonResponse({
+            resourceTemplates: [{ uriTemplate: "file:///{path}", name: "Project files" }],
+          });
+        default:
+          return jsonResponse({});
+      }
+    });
+
+    const container = await mount(
+      App.make,
+      {
+        initialEndpoint: "/mcp",
+        initialExecEnabled: undefined,
+        initialEndpointEditable: undefined,
+      },
+      document.getElementById("host"),
+    );
+    await waitFor(() => container.querySelector(".tabs") !== null);
+    expect([...container.querySelectorAll(".tab")].map((tab) => tab.textContent)).toEqual([
+      "Tools",
+      "Resources",
+    ]);
+
+    const resourcesTab = [...container.querySelectorAll(".tab")].find(
+      (tab) => tab.textContent === "Resources",
+    );
+    await click(resourcesTab);
+
+    await waitFor(() => container.querySelector(".item") !== null);
+    expect(container.textContent).toContain("file:///readme.md");
+    expect(container.textContent).toContain("Project readme");
+    expect(container.textContent).toContain("Resource templates");
+    expect(container.textContent).toContain("file:///{path}");
+
+    // Selecting the template opens the URI-building detail pane.
+    await click(
+      [...container.querySelectorAll(".item")].find((item) =>
+        item.textContent.includes("file:///{path}"),
+      ),
+    );
+    await waitFor(() => container.querySelector(".detail-header h2") !== null);
+    expect(container.querySelector(".detail-header h2").textContent).toBe("Project files");
+    // The `{path}` variable gets its own input inside the detail pane.
+    expect(container.querySelector(".split-detail .field span").textContent).toContain("path");
+    expect(container.querySelector(".split-detail input.text-input").value).toBe("");
+  });
 });

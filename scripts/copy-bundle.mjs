@@ -1,4 +1,4 @@
-// Copies the build artifacts into bundle/mcpexplorer/ so Oxygen can serve them
+// Copies the build artifacts into bundle/mcpexplorer/ so a host can serve them
 // from disk:
 //
 //   dist/index.html            -> bundle/mcpexplorer/index.html        (standalone page)

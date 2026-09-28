@@ -5,10 +5,7 @@ let mimeSrc = (media: Protocol.media): string =>
 let make = (~block: Protocol.contentBlock) =>
   switch block {
   | Protocol.Text(text) => <pre className="content-text"> {text->React.string} </pre>
-  | Protocol.Image(media) =>
-    <div className="content-media">
-      <img src={mimeSrc(media)} alt="image content" />
-    </div>
+  | Protocol.Image(media) => <ImagePreview src={mimeSrc(media)} alt="image content" />
   | Protocol.Audio(media) =>
     <div className="content-media">
       <audio controls=true src={mimeSrc(media)} />

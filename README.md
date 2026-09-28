@@ -1,8 +1,8 @@
 # MCP Explorer
 
 A same-origin, offline-capable single-page viewer for **any MCP server**, written
-in **ReScript + React**. It discovers and renders tools and prompts, and can
-invoke them through a schema-driven "Try it" form.
+in **ReScript + React**. It discovers and renders tools, prompts and resources,
+invokes tools through a schema-driven "Try it" form, and reads resources.
 
 There is no host dependency — you pass the MCP endpoint in when you mount it.
 
@@ -67,7 +67,8 @@ It takes a config object and returns an `{ unmount }` handle. Options:
 
 - Speaks JSON-RPC 2.0 to the configured endpoint using the modern
   `2026-07-28` MCP era (no initialize handshake): `server/discover`, then
-  `tools/list` and `prompts/list` when advertised.
+  `tools/list`, `prompts/list` and `resources/list` /
+  `resources/templates/list` when advertised.
 - **Tool viewer:** name/description, a collapsible JSON-Schema inspector, a
   schema-driven "Try it" form, and `Result`/`Raw`/`cURL` views.
 - **Schema-driven form:** one typed control per input — `enum`/`const` becomes
@@ -83,6 +84,11 @@ It takes a config object and returns an `{ unmount }` handle. Options:
 - **Prompt viewer:** argument form, rendered messages, raw JSON. Blank optional
   arguments are omitted from `prompts/get`; the tab is hidden when the server
   does not advertise prompts.
+- **Resource viewer:** resources by URI plus parameterized templates. Simple
+  RFC 6570 `{variable}` templates build the read URI from per-variable inputs
+  (complex expressions fall back to a raw URI field); reads render text,
+  images/audio and binary downloads with streamed `notifications/*` shown live.
+  The tab is hidden when the server does not advertise resources.
 - **Messages sidebar:** every request is logged with its wire method,
   round-trip time, direction, and raw payloads. Replay a request or reopen it
   in the detail pane.

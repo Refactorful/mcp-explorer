@@ -9,6 +9,9 @@ type method =
   | ToolsCall
   | PromptsList
   | PromptsGet
+  | ResourcesList
+  | ResourcesTemplatesList
+  | ResourcesRead
 
 let wire = method =>
   switch method {
@@ -17,6 +20,9 @@ let wire = method =>
   | ToolsCall => "tools/call"
   | PromptsList => "prompts/list"
   | PromptsGet => "prompts/get"
+  | ResourcesList => "resources/list"
+  | ResourcesTemplatesList => "resources/templates/list"
+  | ResourcesRead => "resources/read"
   }
 
 // --- content blocks (mirror MCP_CONTENT_TYPES in serialization.jl) ---
@@ -31,7 +37,9 @@ type contentBlock =
   | Unknown(JSON.t)
 
 // --- discovery ---
-type capabilities = {tools: bool, prompts: bool}
+// Capabilities are presence-based on the wire (`{"tools":{}}`); each flag here
+// means the server advertised that feature.
+type capabilities = {tools: bool, prompts: bool, resources: bool}
 
 type discoverResult = {
   supportedVersions: array<string>,
@@ -66,6 +74,34 @@ let roleToString = role =>
 type promptMessage = {role: role, content: contentBlock}
 
 type promptResult = {messages: array<promptMessage>, description: option<string>}
+
+// --- resources (resources/list, resources/read) ---
+type resource = {
+  uri: string,
+  name: string,
+  title: option<string>,
+  description: option<string>,
+  mimeType: option<string>,
+  size: option<float>,
+}
+
+type resourceTemplate = {
+  uriTemplate: string,
+  name: string,
+  title: option<string>,
+  description: option<string>,
+  mimeType: option<string>,
+}
+
+// One entry of a `resources/read` result: either inline `text` or base64 `blob`.
+type resourceContents = {
+  uri: string,
+  mimeType: option<string>,
+  text: option<string>,
+  blob: option<string>,
+}
+
+type readResult = {contents: array<resourceContents>}
 
 // --- tool calls (tools/call) ---
 type callResult = {
@@ -150,5 +186,26 @@ let promptResultToJson = (result: promptResult): JSON.t => {
   | None => ()
   }
   JSON.Encode.object(dict)
+}
+
+let resourceResultToJson = (result: readResult): JSON.t => {
+  let contents = result.contents->Array.map(contents => {
+    let dict = Dict.make()
+    dict->Dict.set("uri", JSON.Encode.string(contents.uri))
+    switch contents.mimeType {
+    | Some(mimeType) => dict->Dict.set("mimeType", JSON.Encode.string(mimeType))
+    | None => ()
+    }
+    switch contents.text {
+    | Some(text) => dict->Dict.set("text", JSON.Encode.string(text))
+    | None => ()
+    }
+    switch contents.blob {
+    | Some(blob) => dict->Dict.set("blob", JSON.Encode.string(blob))
+    | None => ()
+    }
+    JSON.Encode.object(dict)
+  })
+  JSON.Encode.object(Dict.fromArray([("contents", JSON.Encode.array(contents))]))
 }
 

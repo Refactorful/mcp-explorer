@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Typed, offline single-page viewer for an Oxygen MCP server (ReScript + React).",
+  "description": "Typed, offline single-page viewer for any MCP server (ReScript + React).",
   "scripts": {
     "res:build": "rescript build",
     "res:watch": "rescript build -w",

@@ -2,8 +2,8 @@ import { defineConfig } from "vite";
 
 // Library build: emits an IIFE bundle exposing the global `McpExplorerBundle`
 // (which registers the callable `window.McpExplorer`), plus the extracted
-// stylesheet. This is the artifact a server such as Oxygen embeds into its own
-// HTML (swagger-style).
+// stylesheet. This is the artifact a host page embeds into its own HTML
+// (swagger-style).
 export default defineConfig({
   define: {
     // Library mode does not replace `process.env.NODE_ENV`, which would pull

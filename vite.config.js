@@ -47,7 +47,7 @@ export default defineConfig(({ command }) => ({
       [mcpDevPath]: {
         target: mcpDevTarget,
         changeOrigin: true,
-        // Oxygen rejects cross-origin requests (403). The browser sends an
+        // Many MCP hosts reject cross-origin requests (403). The browser sends an
         // Origin header even for same-origin POSTs, so strip it before
         // forwarding to make the proxied request look local.
         configure: proxy => {
