@@ -14,7 +14,7 @@ Everything you need is in `bundle/mcpexplorer/`:
 | --- | --- |
 | `mcpexplorer.js` + `mcpexplorer.css` | Self-contained IIFE exposing `window.McpExplorer`. This is the embeddable integration. |
 | `index.html` | Standalone single-file page that mounts itself. |
-| `icon.svg` | App icon, for hosts that want it as their favicon. |
+| `icon.svg` | App icon, for the host page favicon. |
 
 ## Embedding
 
@@ -22,6 +22,7 @@ Load the JS and CSS on any page, drop in an empty container, and mount:
 
 ```html
 <div id="mcp-explorer"></div>
+<link rel="icon" href="/icon.svg" type="image/svg+xml" />
 <link rel="stylesheet" href="/docs/mcp/mcpexplorer.css" />
 <script src="/docs/mcp/mcpexplorer.js"></script>
 <script>
