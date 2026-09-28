@@ -1,170 +1,58 @@
 # MCP Explorer
 
-A same-origin, offline-capable single-page viewer for **any MCP server**. It
-discovers and renders **tools** and **prompts** and can invoke them. The client
-is written in **ReScript + React**, so the whole MCP wire protocol is strongly
-typed and malformed payloads are rejected at the decoding boundary instead of at
-render time.
+A same-origin, offline-capable single-page viewer for **any MCP server**, written
+in **ReScript + React**. It discovers and renders tools and prompts, and can
+invoke them through a schema-driven "Try it" form.
 
-It has no dependency on Oxygen (or any host): you pass the MCP endpoint in when
-you mount it. [Oxygen](https://github.com/oxygenframework/Oxygen.jl) is one
-supported host and gets a ready-made integration snippet.
+There is no host dependency — you pass the MCP endpoint in when you mount it.
 
-The distribution builds three artifacts:
+## The bundle
 
-| Artifact | Purpose |
+Everything you need is in `bundle/mcpexplorer/`:
+
+| File | Purpose |
 | --- | --- |
-| `bundle/mcpexplorer/mcpexplorer.js` + `mcpexplorer.css` | Self-contained IIFE exposing the `window.McpExplorer` function. This is the swagger-style integration. |
-| `bundle/mcpexplorer/index.html` | A standalone single-file page that mounts itself (handy for direct serving/debugging). |
-| `bundle/mcpexplorer/icon.svg` | The app icon, for hosts that want it as their favicon (the standalone page already inlines it). |
+| `mcpexplorer.js` + `mcpexplorer.css` | Self-contained IIFE exposing `window.McpExplorer`. This is the embeddable integration. |
+| `index.html` | Standalone single-file page that mounts itself. |
+| `icon.svg` | App icon, for hosts that want it as their favicon. |
 
-## What it does
+## Embedding
 
-- Talks JSON-RPC 2.0 to the configured MCP endpoint using the modern
-  `2026-07-28` protocol era (no initialize handshake).
-- Discovers capabilities via `server/discover`, then loads `tools/list` and
-  (when advertised) `prompts/list`.
-- **Tool viewer:** name/description, a collapsible JSON-Schema inspector
-  (collapsed by default), a schema-driven "Try it" form, a `Result`/`Raw`/`cURL`
-  view.
-- **Schema-driven form:** one typed control per input — `enum` (and `const`)
-  becomes a `<select>` of valid options, `boolean` a checkbox,
-  `integer`/`number` a validated numeric input, `string` a text input.
-  Containers recurse rather than falling back to raw JSON:
-  - nested objects (resolving `$ref`/`$defs`) render their fields, including
-    `allOf` merged into a single schema;
-  - `additionalProperties` / `patternProperties` render a dynamic key/value
-    editor (add/rename/remove rows, values typed from the value schema and
-    pre-filled with its defaults), and can sit alongside declared `properties`;
-  - arrays (singular or tuple `items`/`prefixItems`) render a dynamic list with
-    add/remove/reorder and `minItems`/`maxItems` enforcement;
-  - `oneOf`/`anyOf` render a branch selector (honouring `discriminator`);
-  - `type` unions (e.g. `["string","null"]`) use their non-null control.
-  Defaults are pre-filled and `required` fields are enforced by native form
-  validation. A `JSON` toggle exposes the raw arguments. If a schema's `default`
-  disagrees with its declared `type` (e.g. `"[]"` for an array), the value is
-  coerced to the declared type so requests stay valid.
-- **\"Try it\" streaming:** if the server answers a call with
-  `text/event-stream` (MCP Streamable HTTP), notifications such as
-  `notifications/progress` are parsed and shown live in a "Stream" log as they
-  arrive, before the final result appears. A `progressToken` derived from the
-  request id is sent in `params._meta` so servers emit progress events. Servers
-  that reply with a single JSON body take the original non-streaming path.
-- **Prompt viewer:** argument form with required-field enforcement, rendered
-  messages, and a raw JSON view.
-- **Navigation:** master–detail split view — the list stays pinned while the
-  selected tool/prompt renders beside it, the selection is reflected in history
-  so browser back/forward work, and narrow screens collapse to a single pane
-  with a back control.
-- **Messages sidebar:** a collapsible third column (outside the tabs, so it
-  persists across Tools/Prompts) logs every client→server request. Each row
-  shows the local 24-hour send time (timestamps are stored as UTC and converted
-  for display), direction, round-trip time in ms, and the wire method
-  (`TOOLS/CALL`, `PROMPTS/GET`, `TOOLS/LIST`, …) — the same record covers all
-  calls, not just tool calls. Clicking a tool/prompt call reopens it in the
-  detail pane with the same inputs; the replay button re-sends a fresh copy of
-  the request; expanding a row shows the raw request/response. Every request is
-  tagged with a v4 UUID for stable identification.
-- Prompts tab is hidden when the server does not advertise the capability.
-- Execution is **configured by the host at mount time**, not by an in-app
-  toggle. It defaults to **on in `vite dev`, off in production bundles**, and a
-  host can force it per mount with the `execEnabled` config option. When off, the
-  tool "Try it" area is disabled and explains that execution is disabled.
-- The endpoint field can be locked with the `endpointEditable: false` config
-  option so the viewer stays pinned to one server.
-
-## Global mount API (swagger-style)
-
-The distribution is an IIFE that registers a top-level global function. It takes
-a config object (like `SwaggerUIBundle({ ... })`) and returns an `{ unmount }`
-handle:
-
-```js
-const viewer = window.McpExplorer({
-  endpoint: "http://127.0.0.1:8080/mcp", // or a same-origin path like "/mcp"
-  domId: "mcp-explorer",
-  execEnabled: true, // optional: turn tool execution on/off for this mount
-  endpointEditable: false, // optional: lock the endpoint field (default true)
-});
-// viewer.unmount();
-```
-
-`domId` is the id of an empty container element; `endpoint` is the MCP URL to
-call. `dom_id`/`url` are accepted as aliases, `domId` defaults to `"mcp-explorer"`
-and `endpoint` defaults to `"/mcp"`. `execEnabled` is an optional boolean that
-turns tool execution on or off for this mount; when omitted the build-time
-default applies (on in `vite dev`, off in production). It is fixed for the
-lifetime of the mount — there is no in-app toggle. `endpointEditable` is an
-optional boolean (default `true`) controlling whether the endpoint field in the
-toolbar can be edited; set it to `false` to pin the viewer to a single server.
-`window.McpExplorer.mount(config)` is the
-same function, and `window.McpExplorer("/mcp")` is a shorthand where the string is
-the `domId`.
+Load the JS and CSS on any page, drop in an empty container, and mount:
 
 ```html
 <div id="mcp-explorer"></div>
-<script src="/docs/mcp/mcpexplorer.js"></script>
 <link rel="stylesheet" href="/docs/mcp/mcpexplorer.css" />
+<script src="/docs/mcp/mcpexplorer.js"></script>
 <script>
-  window.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer" });
+  const viewer = window.McpExplorer({
+    endpoint: "/mcp",          // MCP URL (absolute or same-origin path)
+    domId: "mcp-explorer",     // id of the container element
+    execEnabled: true,         // optional: on in dev, off in production
+    endpointEditable: false,   // optional: lock the endpoint field
+  });
+  // viewer.unmount();
 </script>
 ```
 
-A minimal Oxygen helper that mirrors `swaggerhtml` lives in
-[`integrations/oxygen/mcpexplorer.jl`](integrations/oxygen/mcpexplorer.jl):
+It takes a config object and returns an `{ unmount }` handle. Options:
 
-```julia
-function mcpexplorerhtml(
-    endpoint::String;
-    execenabled::Union{Nothing,Bool}=nothing,
-    endpointeditable::Union{Nothing,Bool}=nothing,
-) :: HTTP.Response
-    viewerjs = readstaticfile("mcpexplorer/mcpexplorer.js")
-    viewerstyles = readstaticfile("mcpexplorer/mcpexplorer.css")
+- **`endpoint`** (alias `url`) — the MCP URL to call. Defaults to `"/mcp"`.
+- **`domId`** (alias `dom_id`) — id of an empty container element. Defaults to
+  `"mcp-explorer"`.
+- **`execEnabled`** — turns tool execution on or off for this mount. When
+  omitted, the build default applies (on in `vite dev`, off in production). It
+  is fixed for the lifetime of the mount; there is no in-app toggle.
+- **`endpointEditable`** — defaults to `true`. Set to `false` to pin the viewer
+  to a single server.
 
-    execoption = isnothing(execenabled) ? "" : ", execEnabled: $(execenabled)"
-    endpointoption = isnothing(endpointeditable) ? "" : ", endpointEditable: $(endpointeditable)"
-
-    html("""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <title>MCP Explorer</title>
-            <style>$viewerstyles</style>
-        </head>
-        <body>
-            <div id="mcp-explorer"></div>
-            <script>$viewerjs</script>
-            <script>
-                window.McpExplorer({ endpoint: "$endpoint", domId: "mcp-explorer"$execoption$endpointoption });
-            </script>
-        </body>
-        </html>
-    """)
-end
-```
-
-Mount it only when the MCP endpoint is mounted:
-
-```julia
-register_internal(
-    ctx,
-    router,
-    "GET",
-    "$docspath/mcp",
-    () -> mcpexplorerhtml(join_url_path(ctx.service.prefix[], mcp_path)),
-)
-```
-
-Pass `execenabled=false` (or `true`) to force tool execution off/on, and
-`endpointeditable=false` to lock the endpoint field so the page stays pinned to
-one server.
+`window.McpExplorer.mount(config)` is the same function, and
+`window.McpExplorer("some-dom-id")` is a shorthand where the string is the
+`domId`.
 
 ### Standalone page
 
-`index.html` mounts itself by calling the same API with an explicit endpoint:
+`index.html` mounts itself with the same API:
 
 ```html
 <div id="root"></div>
@@ -174,119 +62,67 @@ one server.
 </script>
 ```
 
-Edit the `endpoint` there (or override it in the toolbar) to point at another
-server. There is no injected global to configure.
+## What it does
 
-## Quick start
+- Speaks JSON-RPC 2.0 to the configured endpoint using the modern
+  `2026-07-28` MCP era (no initialize handshake): `server/discover`, then
+  `tools/list` and `prompts/list` when advertised.
+- **Tool viewer:** name/description, a collapsible JSON-Schema inspector, a
+  schema-driven "Try it" form, and `Result`/`Raw`/`cURL` views.
+- **Schema-driven form:** one typed control per input — `enum`/`const` becomes
+  a select, `boolean` a checkbox, numbers validated inputs, strings text.
+  Nested objects (`$ref`/`$defs`/`allOf`), key/value maps
+  (`additionalProperties`/`patternProperties`), arrays and tuples,
+  `oneOf`/`anyOf` (with discriminator), and type unions all render as real
+  controls; only unrecognized shapes fall back to a JSON editor. Defaults
+  pre-fill and `required` fields use native validation.
+- **Streaming:** when a call answers with `text/event-stream`, notifications
+  such as `notifications/progress` appear live in a "Stream" log before the
+  final result.
+- **Prompt viewer:** argument form, rendered messages, raw JSON. The tab is
+  hidden when the server does not advertise prompts.
+- **Messages sidebar:** every request is logged with its wire method,
+  round-trip time, direction, and raw payloads. Replay a request or reopen it
+  in the detail pane.
+- **Navigation:** master–detail split with browser history support, collapsing
+  to a single pane on narrow screens.
 
-Requires Node 20+ (developed against Node 26).
+## Development
+
+Requires Node 20+.
 
 ```sh
 npm install
 
-# Dev server with the ReScript compiler in watch mode
-npm run res:watch      # terminal 1
-npm run dev            # terminal 2
+npm run res:watch   # terminal 1: ReScript compiler in watch mode
+npm run dev         # terminal 2: Vite dev server (proxies /mcp)
 
-# Production artifacts -> bundle/mcpexplorer/{mcpexplorer.js,mcpexplorer.css,index.html,icon.svg}
-npm run bundle
-
-# Unit tests (Vitest + an SSR smoke test)
-npm test
-
-# Live smoke test against a running MCP server
-npm run validate:live
+npm test            # unit + DOM/SSR tests
+npm run bundle      # rebuild bundle/mcpexplorer/*
+npm run validate:live               # live smoke test against a running server
 MCP_ENDPOINT=http://127.0.0.1:8080/mcp npm run validate:live
 ```
 
-`npm run dev` serves the viewer and proxies `/mcp` to the MCP backend, so the
-default relative endpoint works in the browser without CORS. The proxy also
-strips the browser `Origin` header, which Oxygen otherwise rejects with `403`.
-Keep the endpoint as the relative `/mcp`; an absolute
-`http://127.0.0.1:8080/mcp` bypasses the proxy and will fail as a cross-origin
-request. The target defaults to `http://127.0.0.1:8080`; override it with:
+In dev, the viewer proxies `/mcp` to `http://127.0.0.1:8080` (override with
+`MCP_DEV_TARGET`) and strips the `Origin` header, since many MCP hosts reject
+cross-origin requests with `403`. Keep the endpoint relative — an absolute URL
+bypasses the proxy and fails as a cross-origin request.
 
-```sh
-MCP_DEV_TARGET=http://127.0.0.1:9090 npm run dev
-```
-
-`npm run validate:live` exercises the same compiled transport directly from Node
-(no proxy) and is useful in CI.
-
-## Module layout
+## Layout
 
 ```
-src/
-  Main.res                 browser entry: window.McpExplorer({ ... }) mount API
-  App.res                  tab shell + discovery state
-  Config.res               build-time dev/prod exec default
-  Curl.res                 cURL export
-  History.res              in-app navigation (History API bindings)
-  Message.res              logged-message type + time/uuid/display helpers
-  MessageStore.res         in-memory message log (subscribe/notify)
-  Stream.res               SSE message type (notification/request/response)
-  UseDiscovery.res         discover + tools + prompts loading hook
-  api/
-    Protocol.res           wire types, content blocks, apiError, encoders
-    Codec.res              total decoders with error paths
-    Mcp.res                typed transport over fetch (logs + streams)
-    Sse.res                incremental text/event-stream reader
-    Schema.res             JSON-Schema defaults + required fields
-  JsonValue.res            keyed JSON get/set/remove (immutable updates)
-  components/
-    ConfigBar.res  Tabs.res  ToolList.res  ToolDetail.res
-    SchemaForm.res  JsonControl.res
-    PromptList.res PromptDetail.res  SchemaView.res  JsonEditor.res
-    ResultView.res ContentView.res  MessagesPanel.res
-  styles.css
-test/
-  Codec_test.res  Schema_test.res  Mcp_test.res  Message_test.res  Vitest.res
-  app.smoke.test.mjs  app.navigation.test.mjs  main.mount.test.mjs
-  messages.panel.test.mjs  schemaform.test.mjs  tooldetail.form.test.mjs
-  tooldetail.stream.test.mjs  sse.test.mjs  curl.test.mjs
-scripts/
-  copy-bundle.mjs          dist*/ -> bundle/mcpexplorer/
-  validate-live.mjs        live transport smoke test
-vite.config.js             single-file HTML build
-vite.lib.config.js         IIFE global build
+src/                  ReScript app (Main.res = mount API, App.res = shell)
+src/api/              protocol, codecs, transport, SSE, schema
+src/components/       one React component per file
+test/                 Vitest unit tests + jsdom/SSR tests
+scripts/              copy-bundle, validate-live
+bundle/mcpexplorer/   committed build artifacts
 ```
 
-## Type-safety notes
+## Notes
 
-- The wire method string is derived from a `Protocol.method` variant, so the
-  `Mcp-Method` header and the body method cannot disagree.
-- `Mcp-Name` is only produced for `tools/call` and `prompts/get`; the typed
-  surface makes the illegal "list with a name" state unrepresentable.
-- Every result is `result<_, Protocol.apiError>`; components pattern-match
-  instead of optional-chaining into `undefined`.
-- Content blocks are a closed variant with an explicit `Unknown` escape hatch,
-  so a future block type does not fail the whole call.
-- `inputSchema`/`structuredContent` stay `JSON.t` by design and are only
-  stringified for display.
-
-## Version matrix
-
-These are pinned exactly because `@rescript/react` majors track React and
-ReScript versions and are the most common setup breakage.
-
-| Package | Version |
-| --- | --- |
-| `rescript` | 12.3.1 |
-| `@rescript/react` | 0.15.0 |
-| `react` / `react-dom` | 19.2.0 |
-| `@glennsl/rescript-fetch` | 0.3.0 |
-| `vite` | 8.3.1 |
-| `vite-plugin-singlefile` | 2.3.3 |
-| `vitest` | 5.0.2 |
-
-## Testing
-
-- **Unit (`npm test`)** — decoders against captured fixtures (including
-  malformed and unknown content), schema defaults/`$ref` resolution, the
-  `Mcp-Name`/method/`_meta` invariants, schema-form rendering (enums, typed
-  inputs, nested `$ref`s, JSON fallback), the global mount API in a jsdom DOM,
-  and an SSR render smoke test.
-- **Live (`npm run validate:live`)** — runs `server/discover`, `tools/list`,
-  and a `tools/call` against a running server through the compiled transport.
-- **Manual** — load the built page from the same origin as the MCP server so
-  no CORS proxy is involved.
+- The wire protocol is strongly typed: method/header mismatches are
+  unrepresentable, decoders return `result` instead of `undefined`, and unknown
+  content-block types degrade gracefully rather than failing a call.
+- Versions are pinned exactly: `rescript` 12.3.1, `@rescript/react` 0.15.0,
+  React 19.2.0, Vite 8.3.1, Vitest 5.0.2.

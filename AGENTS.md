@@ -6,7 +6,7 @@ Project notes for agents working in this repo. Read this before changing code.
 
 A same-origin, offline-capable single-page viewer for **any MCP server**
 (ReScript + React). It discovers tools/prompts, renders a schema-driven "Try it"
-form, invokes tools, and can be embedded into any host page. It has **no Oxygen
+form, invokes tools, and can be embedded into any host page. It has **no host
 dependency**; the MCP endpoint is passed in at mount time.
 
 Three build artifacts are committed under `bundle/mcpexplorer/`:
@@ -60,8 +60,7 @@ test/…                     *.res unit tests + *.test.mjs DOM/SSR tests
 scripts/{copy-bundle,validate-live}.mjs
 vite.config.js             single-file HTML build
 vite.lib.config.js         IIFE global build
-integrations/oxygen/       reference Julia helper (example host)
-bundle/mcpexplorer/            committed build artifacts
+bundle/mcpexplorer/        committed build artifacts
 ```
 
 `rescript.json`: `sources` = `src` + `test` (dev), `package-specs` esmodule
@@ -231,7 +230,7 @@ invalid value. Keep that behavior.
 
 ## Dev server / CORS
 
-- Oxygen (and similar) **reject cross-origin requests**: `OPTIONS` → `405`,
+- Many MCP hosts **reject cross-origin requests**: `OPTIONS` → `405`,
   `POST` with an `Origin` header → `403`.
 - `vite.config.js` proxies `/mcp` to `MCP_DEV_TARGET`
   (default `http://127.0.0.1:8080`) and **strips the `Origin` header**. Keep the
