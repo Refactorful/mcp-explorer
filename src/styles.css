@@ -646,6 +646,28 @@ body {
   align-items: start;
 }
 
+/* Entries whose value is a nested container keep a compact key + remove header
+   line and give the value the full width below, instead of a tall empty key
+   column (and a squeezed value) beside it. */
+.map-row.container > .map-key {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.map-row.container > .map-remove {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.map-row.container > .map-value {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  /* Same gutter as an array row's index column + gap, so the entry's fields
+     nest under its key the way an array element's content nests under its
+     index. */
+  padding-left: 24px;
+}
+
 .map-key {
   font-family: var(--mono);
 }

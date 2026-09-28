@@ -9,5 +9,6 @@ let make: (
   ~maxProperties: option<int>,
   ~onChange: JSON.t => unit,
   ~onValidityChange: bool => unit,
+  ~valueIsContainer: string => bool,
   ~renderValue: (string, option<JSON.t>, JSON.t => unit) => React.element,
 ) => React.element

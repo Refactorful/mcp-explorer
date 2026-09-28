@@ -66,6 +66,7 @@ describe("MapControl", () => {
       maxProperties: undefined,
       onChange: (value) => changes.push(value),
       onValidityChange: () => {},
+      valueIsContainer: () => false,
       renderValue,
     });
 
@@ -94,6 +95,25 @@ describe("MapControl", () => {
     });
     expect(container.querySelectorAll(".map-row").length).toBe(1);
     expect(changes.at(-1)).toEqual({ b: "" });
+  });
+
+  test("marks rows whose value is a container", async () => {
+    const container = await mountMap({
+      value: { a: "x", b: "y" },
+      newValue: "",
+      reserved: [],
+      keyPatterns: [],
+      allowAdditional: true,
+      minProperties: 0,
+      maxProperties: undefined,
+      onChange: () => {},
+      onValidityChange: () => {},
+      valueIsContainer: (key) => key === "b",
+      renderValue,
+    });
+
+    expect(container.querySelectorAll(".map-row").length).toBe(2);
+    expect(container.querySelectorAll(".map-row.container").length).toBe(1);
   });
 });
 

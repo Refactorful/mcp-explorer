@@ -470,6 +470,13 @@ and renderExtraMap = (
   let validityPath = path == "" ? "*" : path ++ ".*"
   let min = Schema.minPropertiesOf(resolved)
   let minProperties = required && min == 0 ? 1 : min
+  // Container values render a full-width nested control, so the map row gives
+  // them their own line instead of a tall empty key column.
+  let valueIsContainer = (key: string): bool =>
+    switch classify(effective(valueSchemaForKey(key, extra, patterns), root, 0)) {
+    | Object | Map(_) | Array(_) | Variant(_) | Json => true
+    | Select(_) | Checkbox | Integer | Number | Text => false
+    }
 
   <MapControl
     value=current
@@ -481,6 +488,7 @@ and renderExtraMap = (
     maxProperties={Schema.maxPropertiesOf(resolved)}
     onChange=onValue
     onValidityChange={valid => reportError(validityPath, valid)}
+    valueIsContainer
     renderValue={(key, entryValue, setEntryValue) =>
       renderChild(
         ~schema=valueSchemaForKey(key, extra, patterns),

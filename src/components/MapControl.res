@@ -80,6 +80,7 @@ let make = (
   ~maxProperties: option<int>,
   ~onChange: JSON.t => unit,
   ~onValidityChange: bool => unit,
+  ~valueIsContainer: string => bool,
   ~renderValue: (string, option<JSON.t>, JSON.t => unit) => React.element,
 ) => {
   let (rows, setRows) = UseSyncedRows.use(
@@ -135,7 +136,9 @@ let make = (
   <div className="schema-map">
     {rows
     ->Array.map(row =>
-      <div className="map-row" key={Int.toString(row.id)}>
+      <div
+        className={valueIsContainer(row.key) ? "map-row container" : "map-row"}
+        key={Int.toString(row.id)}>
         <input
           className="text-input map-key"
           value={row.key}
