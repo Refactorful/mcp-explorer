@@ -20,6 +20,9 @@ let make = (
   let (formValid, setFormValid) = React.useState(() => true)
   let (formKey, setFormKey) = React.useState(() => 0)
   let (state, setState) = React.useState(() => Protocol.Idle)
+  // SSE messages streamed before the final response (progress notifications,
+  // server requests, ...). Shown live while the call is in flight.
+  let (events, setEvents) = React.useState(() => ([]: array<Stream.t>))
 
   let applyArgs = (next: JSON.t) => {
     setArgs(_ => next)
@@ -50,6 +53,7 @@ let make = (
     setFormValid(_ => true)
     setFormKey(key => key + 1)
     setState(_ => Protocol.Idle)
+    setEvents(_ => [])
   }
 
   let client = Mcp.make(~endpoint)
@@ -63,13 +67,53 @@ let make = (
 
   let onRun = () => {
     setState(_ => Protocol.Loading)
+    setEvents(_ => [])
     let request = async () =>
-      switch await Mcp.callTool(client, ~name=tool.name, ~arguments=args) {
+      switch await Mcp.callTool(
+        client,
+        ~name=tool.name,
+        ~arguments=args,
+        ~onEvent=event => setEvents(previous => Array.concat(previous, [event])),
+      ) {
       | Ok(value) => setState(_ => Protocol.Success(value))
       | Error(err) => setState(_ => Protocol.Failure(err))
       }
     request()->ignore
   }
+
+  let renderStream = () =>
+    if events->Array.length == 0 {
+      React.null
+    } else {
+      <div className="stream-log">
+        <h3> {"Stream"->React.string} </h3>
+        <ul className="stream-list">
+          {events
+          ->Array.mapWithIndex((event, index) =>
+            <li
+              key={Int.toString(index)}
+              className={"stream-event " ++ Stream.kindClass(event.Stream.kind)}>
+              <div className="stream-line">
+                <span className="stream-time">
+                  {Message.formatTime(event.Stream.at)->React.string}
+                </span>
+                <span className="stream-kind">
+                  {Stream.kindLabel(event.Stream.kind)->React.string}
+                </span>
+                {switch event.Stream.method {
+                | Some(method) => <span className="stream-method"> {method->React.string} </span>
+                | None => React.null
+                }}
+              </div>
+              <pre className="code-block">
+                {event.Stream.payload->Schema.pretty->React.string}
+              </pre>
+            </li>
+          )
+          ->React.array}
+        </ul>
+      </div>
+    }
 
   let jsonInvalid = mode == "json" && parseError->Option.isSome
   let runDisabled = !execEnabled || jsonInvalid
@@ -162,6 +206,7 @@ let make = (
             </div>
           </fieldset>
         </form>
+        {renderStream()}
         <ResultView state curl />
       </section>
     </div>

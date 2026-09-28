@@ -46,8 +46,10 @@ src/
   Config.res               build-time dev/prod exec default (__MCP_EXPLORER_DEV__)
   Curl.res                 cURL export (resolves relative endpoint to origin)
   History.res              in-app navigation (History API bindings)
+  Message.res / MessageStore.res  transport message log + helpers
+  Stream.res               SSE message type (notification/request/response)
   UseDiscovery.res         discover + tools + prompts loading hook
-  api/{Protocol,Codec,Mcp,Schema}.res
+  api/{Protocol,Codec,Mcp,Sse,Schema}.res
   JsonValue.res            keyed JSON get/set/remove (immutable updates)
   components/…             UI; one component per file (see React notes)
   styles.css
@@ -178,8 +180,20 @@ let getElement: string => 'element = %raw(`(function(id) { ... })`)
 
 ## MCP protocol contract (modern `2026-07-28` era)
 
-- One `POST` per request to the endpoint; the server replies with a single JSON
-  object (not SSE). `GET`/`DELETE` return `405`.
+- One `POST` per request to the endpoint. The server may reply either with a
+  single JSON object **or** with a `text/event-stream` (SSE) stream
+  (Streamable HTTP). `GET`/`DELETE` return `405`.
+- **Streaming:** when the response `Content-Type` is `text/event-stream`,
+  `Sse.read` decodes each `data:` frame and `Mcp.post` emits every non-final
+  JSON-RPC message (notifications / server requests) through an optional
+  `~onEvent` callback as it arrives; it resolves when the message whose `id`
+  matches the request shows up. Servers that keep the stream open are handled
+  (the reader is cancelled once the response arrives). A stream that closes with
+  no matching response is a `ProtocolMismatch`. JSON responses still take the
+  original single-body path. `ToolDetail` passes `onEvent` and renders the
+  events live in a "Stream" log before the final result.
+- `params._meta.progressToken` is set to the request id so servers emit
+  `notifications/progress`. `Mcp.envelope` derives it from `~id`.
 - Headers (exact):
 
   ```

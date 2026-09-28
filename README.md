@@ -43,6 +43,12 @@ The distribution builds two artifacts:
   validation. A `JSON` toggle exposes the raw arguments. If a schema's `default`
   disagrees with its declared `type` (e.g. `"[]"` for an array), the value is
   coerced to the declared type so requests stay valid.
+- **\"Try it\" streaming:** if the server answers a call with
+  `text/event-stream` (MCP Streamable HTTP), notifications such as
+  `notifications/progress` are parsed and shown live in a "Stream" log as they
+  arrive, before the final result appears. A `progressToken` derived from the
+  request id is sent in `params._meta` so servers emit progress events. Servers
+  that reply with a single JSON body take the original non-streaming path.
 - **Prompt viewer:** argument form with required-field enforcement, rendered
   messages, and a raw JSON view.
 - **Navigation:** master–detail split view — the list stays pinned while the
@@ -217,11 +223,13 @@ src/
   History.res              in-app navigation (History API bindings)
   Message.res              logged-message type + time/uuid/display helpers
   MessageStore.res         in-memory message log (subscribe/notify)
+  Stream.res               SSE message type (notification/request/response)
   UseDiscovery.res         discover + tools + prompts loading hook
   api/
     Protocol.res           wire types, content blocks, apiError, encoders
     Codec.res              total decoders with error paths
-    Mcp.res                typed transport over fetch (logs every request)
+    Mcp.res                typed transport over fetch (logs + streams)
+    Sse.res                incremental text/event-stream reader
     Schema.res             JSON-Schema defaults + required fields
   JsonValue.res            keyed JSON get/set/remove (immutable updates)
   components/
@@ -234,7 +242,7 @@ test/
   Codec_test.res  Schema_test.res  Mcp_test.res  Message_test.res  Vitest.res
   app.smoke.test.mjs  app.navigation.test.mjs  main.mount.test.mjs
   messages.panel.test.mjs  schemaform.test.mjs  tooldetail.form.test.mjs
-  curl.test.mjs
+  tooldetail.stream.test.mjs  sse.test.mjs  curl.test.mjs
 scripts/
   copy-bundle.mjs          dist*/ -> bundle/mcpexplorer/
   validate-live.mjs        live transport smoke test

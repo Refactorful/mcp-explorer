@@ -25,10 +25,13 @@ let newId = () => {
   nextId.contents
 }
 
-let meta = (client: t): JSON.t => {
+let meta = (~id: int, client: t): JSON.t => {
   let m = Dict.make()
   m->Dict.set("io.modelcontextprotocol/protocolVersion", JSON.Encode.string(protocolVersion))
   m->Dict.set("io.modelcontextprotocol/clientCapabilities", JSON.Encode.object(Dict.make()))
+  // Ask the server to stream `notifications/progress` (and other partial
+  // updates) for this request. The JSON-RPC id is unique per request.
+  m->Dict.set("progressToken", JSON.Encode.int(id))
   let info = Dict.make()
   info->Dict.set("name", JSON.Encode.string(client.clientName))
   info->Dict.set("version", JSON.Encode.string(client.clientVersion))
@@ -48,7 +51,7 @@ let envelope = (~id: int, ~method: Protocol.method, ~params: JSON.t, client: t):
   | Some(dict) => dict
   | None => Dict.make()
   }
-  paramsDict->Dict.set("_meta", meta(client))
+  paramsDict->Dict.set("_meta", meta(~id, client))
   let body = Dict.make()
   body->Dict.set("jsonrpc", JSON.Encode.string("2.0"))
   body->Dict.set("id", JSON.Encode.int(id))
@@ -77,6 +80,7 @@ let post = async (
   ~method: Protocol.method,
   ~name: option<string>,
   ~params: JSON.t,
+  ~onEvent: option<Stream.t => unit>=?,
 ): result<JSON.t, Protocol.apiError> => {
   let startedAt = Date.now()
   let jsonRpcId = newId()
@@ -94,6 +98,77 @@ let post = async (
   // Record the outbound request so the Messages sidebar can show and replay it.
   let messageId = MessageStore.start(~method, ~name, ~params, ~request=body, ~startedAt)
 
+  // Surface a streamed message (notification / server request) to the caller.
+  let emit = (json: JSON.t) =>
+    switch onEvent {
+    | Some(callback) => callback(Stream.ofJson(json))
+    | None => ()
+    }
+
+  // Classic path: one JSON body holding a single JSON-RPC response.
+  let decodeJson = (response: Fetch.Response.t, text: string): result<JSON.t, Protocol.apiError> =>
+    switch parseBody(text) {
+    | Error(_) as err => err
+    | Ok(json) =>
+      switch Codec.responseEnvelope(json, "$") {
+      | Ok(Codec.Success(result)) => Ok(result)
+      | Ok(Codec.RpcFailure(err)) => Error(Protocol.JsonRpc(err))
+      | Error(e) =>
+        if response->Fetch.Response.ok {
+          Error(Protocol.Decode(e))
+        } else {
+          Error(Protocol.Http(response->Fetch.Response.status, text))
+        }
+      }
+    }
+
+  // Streamable-HTTP path: a stream of SSE messages. Emit partial updates as
+  // they arrive and resolve once our request id shows up in a response.
+  let decodeSse = async (
+    response: Fetch.Response.t,
+  ): result<JSON.t, Protocol.apiError> => {
+    let finalResult = ref(None)
+    let isFinal = (json: JSON.t) =>
+      switch json->JsonValue.getField("id")->Option.flatMap(JSON.Decode.float) {
+      | Some(id) => id->Float.toInt == jsonRpcId
+      | None => false
+      }
+    let onMessage = (json: JSON.t) =>
+      if isFinal(json) {
+        finalResult :=
+          Some(
+            switch Codec.responseEnvelope(json, "$") {
+            | Ok(Codec.Success(result)) => Ok(result)
+            | Ok(Codec.RpcFailure(err)) => Error(Protocol.JsonRpc(err))
+            | Error(e) => Error(Protocol.Decode(e))
+            },
+          )
+      } else {
+        emit(json)
+      }
+    switch (
+      try {
+        let _ = await Sse.read(response, onMessage, isFinal)
+        Ok()
+      } catch {
+      | JsExn(e) =>
+        Error(Protocol.Transport(JsExn.message(e)->Option.getOr("failed to read SSE stream")))
+      }
+    ) {
+    | Error(_) as err => err
+    | Ok(_) =>
+      switch finalResult.contents {
+      | Some(result) => result
+      | None =>
+        Error(
+          Protocol.ProtocolMismatch(
+            "SSE stream ended without a response for request " ++ jsonRpcId->Int.toString,
+          ),
+        )
+      }
+    }
+  }
+
   let result = switch (
     try {
       Ok(await Fetch.fetch(client.endpoint, init))
@@ -104,28 +179,20 @@ let post = async (
   ) {
   | Error(_) as err => err
   | Ok(response) =>
-    let bodyText = try {
-      Ok(await response->Fetch.Response.text)
-    } catch {
-    | JsExn(e) =>
-      Error(Protocol.Transport(JsExn.message(e)->Option.getOr("failed to read response body")))
-    }
-    switch bodyText {
-    | Error(_) as err => err
-    | Ok(text) =>
-      switch parseBody(text) {
+    let contentType =
+      response->Fetch.Response.headers->Fetch.Headers.get("content-type")->Option.getOr("")
+    if contentType->String.includes("text/event-stream") {
+      await decodeSse(response)
+    } else {
+      let bodyText = try {
+        Ok(await response->Fetch.Response.text)
+      } catch {
+      | JsExn(e) =>
+        Error(Protocol.Transport(JsExn.message(e)->Option.getOr("failed to read response body")))
+      }
+      switch bodyText {
       | Error(_) as err => err
-      | Ok(json) =>
-        switch Codec.responseEnvelope(json, "$") {
-        | Ok(Codec.Success(result)) => Ok(result)
-        | Ok(Codec.RpcFailure(err)) => Error(Protocol.JsonRpc(err))
-        | Error(e) =>
-          if response->Fetch.Response.ok {
-            Error(Protocol.Decode(e))
-          } else {
-            Error(Protocol.Http(response->Fetch.Response.status, text))
-          }
-        }
+      | Ok(text) => decodeJson(response, text)
       }
     }
   }
@@ -177,6 +244,7 @@ let callTool = async (
   client: t,
   ~name: string,
   ~arguments: JSON.t,
+  ~onEvent: option<Stream.t => unit>=?,
 ): result<Protocol.callResult, Protocol.apiError> => {
   let params = Dict.make()
   params->Dict.set("name", JSON.Encode.string(name))
@@ -186,6 +254,7 @@ let callTool = async (
     ~method=Protocol.ToolsCall,
     ~name=Some(name),
     ~params=JSON.Encode.object(params),
+    ~onEvent?,
   )
   response->Result.flatMap(json => decodeResult(Codec.callResult, json))
 }
@@ -199,6 +268,7 @@ let getPrompt = async (
   client: t,
   ~name: string,
   ~arguments: dict<string>,
+  ~onEvent: option<Stream.t => unit>=?,
 ): result<Protocol.promptResult, Protocol.apiError> => {
   let argsJson = Dict.make()
   arguments->Dict.toArray->Array.forEach(((key, value)) =>
@@ -212,6 +282,7 @@ let getPrompt = async (
     ~method=Protocol.PromptsGet,
     ~name=Some(name),
     ~params=JSON.Encode.object(params),
+    ~onEvent?,
   )
   response->Result.flatMap(json => decodeResult(Codec.promptResult, json))
 }

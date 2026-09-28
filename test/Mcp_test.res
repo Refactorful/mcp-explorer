@@ -46,8 +46,7 @@ describe("Mcp headers and envelope", () => {
     expect(String.includes(text, "io.modelcontextprotocol/clientInfo"))->toBeTruthy
   })
 
-  test("request parameters survive alongside _meta", () => {
-    let client = Mcp.make(~endpoint="/mcp")
+  test("request parameters survive alongside _meta", () => {    let client = Mcp.make(~endpoint="/mcp")
     let params = Dict.make()
     params->Dict.set("name", JSON.Encode.string("greet"))
     let body = Mcp.envelope(
@@ -59,5 +58,17 @@ describe("Mcp headers and envelope", () => {
     let text = body->JSON.stringify
     expect(String.includes(text, `"name":"greet"`))->toBeTruthy
     expect(String.includes(text, `"method":"tools/call"`))->toBeTruthy
+  })
+
+  test("envelope carries a progress token tied to the request id", () => {
+    let client = Mcp.make(~endpoint="/mcp")
+    let body = Mcp.envelope(
+      ~id=42,
+      ~method=Protocol.ToolsCall,
+      ~params=JSON.Encode.object(Dict.make()),
+      client,
+    )
+    let text = body->JSON.stringify
+    expect(String.includes(text, `"progressToken":42`))->toBeTruthy
   })
 })

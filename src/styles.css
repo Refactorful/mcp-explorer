@@ -1000,3 +1000,79 @@ body {
     max-height: calc(100vh - 120px);
   }
 }
+
+/* Live SSE stream log (partial updates shown before the final result). */
+
+.stream-log {
+  margin-top: 12px;
+}
+
+.stream-log h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-muted);
+}
+
+.stream-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stream-event {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+  padding: 8px 10px;
+}
+
+.stream-event.notification {
+  border-left-color: var(--accent);
+}
+
+.stream-event.request {
+  border-left-color: var(--warning);
+}
+
+.stream-event.response {
+  border-left-color: var(--success);
+}
+
+.stream-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.stream-time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.stream-kind {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--accent-light-fg);
+  background: var(--accent-light);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.stream-method {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.stream-event .code-block {
+  max-height: 220px;
+}
