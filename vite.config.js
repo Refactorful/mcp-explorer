@@ -1,5 +1,32 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
+
+// Inline the app icon as a data URI so the standalone single-file page keeps
+// its favicon without emitting a separate asset (vite-plugin-singlefile only
+// inlines JS/CSS; a plain <link rel="icon"> would leak an extra .svg file).
+const iconSvg = readFileSync(
+  fileURLToPath(new URL("./assets/icon-compass.svg", import.meta.url)),
+  "utf8"
+);
+const iconHref = `data:image/svg+xml;base64,${Buffer.from(iconSvg).toString("base64")}`;
+
+function faviconPlugin() {
+  return {
+    name: "mcp-explorer:favicon",
+    enforce: "pre",
+    transformIndexHtml() {
+      return [
+        {
+          tag: "link",
+          attrs: { rel: "icon", type: "image/svg+xml", href: iconHref },
+          injectTo: "head",
+        },
+      ];
+    },
+  };
+}
 
 // In dev the viewer is served from Vite, so a relative endpoint such as `/mcp`
 // would hit Vite itself (and get HTML back). Proxy it to the MCP backend so the
@@ -11,7 +38,7 @@ const mcpDevPath = process.env.MCP_DEV_PATH ?? "/mcp";
 // `__MCP_EXPLORER_DEV__` lets the bundle default execution to on in `vite dev`
 // and off in production builds.
 export default defineConfig(({ command }) => ({
-  plugins: [viteSingleFile()],
+  plugins: [faviconPlugin(), viteSingleFile()],
   define: {
     __MCP_EXPLORER_DEV__: JSON.stringify(command === "serve"),
   },

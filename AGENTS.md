@@ -9,11 +9,14 @@ A same-origin, offline-capable single-page viewer for **any MCP server**
 form, invokes tools, and can be embedded into any host page. It has **no Oxygen
 dependency**; the MCP endpoint is passed in at mount time.
 
-Two build artifacts are committed under `bundle/mcpexplorer/`:
+Three build artifacts are committed under `bundle/mcpexplorer/`:
 
 - `mcpexplorer.js` + `mcpexplorer.css` — self-contained IIFE exposing the
   `window.McpExplorer` function (the embeddable integration).
 - `index.html` — standalone single-file page that mounts itself.
+- `icon.svg` — app icon (copied from `assets/icon-compass.svg`). The standalone
+  page inlines it as a data-URI favicon via a Vite plugin in `vite.config.js`;
+  hosts embedding the lib can reference the file themselves.
 
 ## Commands
 

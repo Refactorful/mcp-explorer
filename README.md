@@ -10,12 +10,13 @@ It has no dependency on Oxygen (or any host): you pass the MCP endpoint in when
 you mount it. [Oxygen](https://github.com/oxygenframework/Oxygen.jl) is one
 supported host and gets a ready-made integration snippet.
 
-The distribution builds two artifacts:
+The distribution builds three artifacts:
 
 | Artifact | Purpose |
 | --- | --- |
 | `bundle/mcpexplorer/mcpexplorer.js` + `mcpexplorer.css` | Self-contained IIFE exposing the `window.McpExplorer` function. This is the swagger-style integration. |
 | `bundle/mcpexplorer/index.html` | A standalone single-file page that mounts itself (handy for direct serving/debugging). |
+| `bundle/mcpexplorer/icon.svg` | The app icon, for hosts that want it as their favicon (the standalone page already inlines it). |
 
 ## What it does
 
@@ -187,7 +188,7 @@ npm install
 npm run res:watch      # terminal 1
 npm run dev            # terminal 2
 
-# Production artifacts -> bundle/mcpexplorer/{mcpexplorer.js,mcpexplorer.css,index.html}
+# Production artifacts -> bundle/mcpexplorer/{mcpexplorer.js,mcpexplorer.css,index.html,icon.svg}
 npm run bundle
 
 # Unit tests (Vitest + an SSR smoke test)
