@@ -44,18 +44,16 @@ body {
 
 .app {
   max-width: 1400px;
-  /* Fill the viewport so both columns end at the same bottom line (the page's
-     20px padding), matching the side padding. Long content scrolls inside a
-     column instead of growing the page. */
-  height: 100vh;
-  height: 100dvh;
+  /* The page scrolls with its content; `min-height` keeps the shell at least
+     viewport-tall on short pages. */
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
   padding: 20px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 20px;
-  align-items: stretch;
 }
 
 .app.collapsed {
@@ -803,19 +801,23 @@ body {
   grid-column: 1;
   grid-row: 2;
   min-width: 0;
-  min-height: 0;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Stretch the tool card to the full column height so it ends at the page
-   padding, while its content scrolls inside `.app-main`. */
+/* The tool card fills the column when content is short and grows with the
+   selected tool; the page scrolls when it is taller than the viewport. */
 .app-main > .panel {
-  min-height: 100%;
+  flex: 1;
 }
 
 .messages-panel {
   grid-column: 2;
   grid-row: 2;
+  position: sticky;
+  top: 20px;
+  align-self: start;
+  max-height: calc(100vh - 40px);
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -997,8 +999,6 @@ body {
   .app.collapsed {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
-    height: auto;
-    min-height: 100vh;
   }
   .app-header,
   .app.collapsed .app-header {
@@ -1006,15 +1006,14 @@ body {
   }
   .app-main {
     grid-row: auto;
-    overflow: visible;
   }
   .app-main > .panel {
-    min-height: 0;
+    flex: none;
   }
   .messages-panel {
     grid-column: 1;
     grid-row: auto;
-    max-height: calc(100vh - 120px);
+    position: static;
   }
 }
 
