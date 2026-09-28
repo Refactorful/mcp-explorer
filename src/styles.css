@@ -221,7 +221,11 @@ body {
 .split-list {
   position: sticky;
   top: 16px;
-  max-height: calc(100vh - 140px);
+  /* Fallback only: `App.res` sizes this to the space actually left in the
+     viewport (the list grows with its content and scrolls only when cramped).
+     Without JS this cap keeps the list above the page's bottom padding. */
+  max-height: calc(100vh - 178px);
+  max-height: calc(100dvh - 178px);
   overflow: auto;
 }
 

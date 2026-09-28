@@ -19,6 +19,42 @@ let sidebarIcon = (isOpen: bool): React.element =>
     {isOpen ? <path d="M8 9l3 3-3 3" /> : <path d="M11 9l-3 3 3 3" />}
   </svg>
 
+// The pinned tool/prompt list should use whatever vertical space is left in the
+// viewport: show all of its content when there is room, scroll only when there
+// is not. A single CSS `max-height` cannot express that — it would either leave
+// slack once the list sticks under the top bar or hang below the fold at the
+// top of the page — so measure the list's actual position on scroll/resize and
+// set it inline. The CSS `max-height` on `.split-list` remains the no-JS
+// fallback, and a guard clears the inline value in the single-pane layout.
+let attachListSizing: unit => unit => unit = %raw(`function attachListSizing() {
+  var el = document.querySelector(".split-list");
+  if (!el) return function () {};
+  var update = function () {
+    if (typeof window.matchMedia === "function" && window.matchMedia("(max-width: 860px)").matches) {
+      el.style.maxHeight = "";
+      return;
+    }
+    var top = Math.max(el.getBoundingClientRect().top, 16);
+    var max = window.innerHeight - top - 20;
+    el.style.maxHeight = Math.max(max, 160) + "px";
+  };
+  update();
+  window.addEventListener("scroll", update, { passive: true });
+  window.addEventListener("resize", update);
+  var header = document.querySelector(".app-header");
+  var observer = null;
+  if (typeof ResizeObserver !== "undefined" && header) {
+    observer = new ResizeObserver(update);
+    observer.observe(header);
+  }
+  return function () {
+    window.removeEventListener("scroll", update);
+    window.removeEventListener("resize", update);
+    if (observer) observer.disconnect();
+    el.style.maxHeight = "";
+  };
+}`)
+
 // Tools and prompts render through the same master list.
 let toItem = (name: string, description: option<string>): ItemList.item => {name, description}
 
@@ -71,6 +107,15 @@ let make = (
     let unsubscribe = MessageStore.subscribe(() => setMessages(_ => MessageStore.all()))
     Some(unsubscribe)
   })
+
+  // Size the pinned list to the space actually left in the viewport (see
+  // `attachListSizing`), re-attaching whenever discovery delivers the list.
+  React.useEffect1(() => {
+    switch discovery {
+    | UseDiscovery.Loaded(_) => Some(attachListSizing())
+    | UseDiscovery.Loading | UseDiscovery.Failed(_) => None
+    }
+  }, [discovery])
 
   // Apply a view without touching history (used by popstate / push).
   let applyView = (view: History.view) => {
