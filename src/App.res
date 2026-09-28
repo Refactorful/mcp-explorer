@@ -247,10 +247,7 @@ let make = (
       <div className="app-header-left">
         <div className="brand">
           <img className="brand-logo" src={brandLogo} alt="" ariaHidden=true />
-          <div className="brand-text">
-            <h1> {"MCP Explorer"->React.string} </h1>
-            <span className="subtitle"> {"MCP server inspector"->React.string} </span>
-          </div>
+          <h1> {"MCP Explorer"->React.string} </h1>
         </div>
         <ConfigBar
           endpoint

@@ -100,26 +100,13 @@ body {
   width: 32px;
   height: 32px;
   flex: none;
-  /* Optical nudge: the tall title line-box makes geometric centering read low. */
-  position: relative;
-  top: -2px;
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .brand h1 {
   margin: 0;
   font-size: 22px;
+  line-height: 1;
   letter-spacing: 0.2px;
-}
-
-.subtitle {
-  color: var(--fg-muted);
-  font-size: 12px;
 }
 
 .config-bar {
