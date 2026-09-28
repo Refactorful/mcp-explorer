@@ -1,9 +1,7 @@
 // @vitest-environment jsdom
 import { describe, test, expect, vi } from "vitest";
-import * as React from "react";
-import { act } from "react";
-import { createRoot } from "react-dom/client";
 import * as MessagesPanel from "../src/components/MessagesPanel.res.mjs";
+import { click, mount } from "./helpers.mjs";
 
 const startedAt = Date.UTC(2024, 0, 2, 20, 30, 46);
 
@@ -22,29 +20,13 @@ const message = (overrides = {}) => ({
   ...overrides,
 });
 
-const render = async (props) => {
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  await act(async () => {
-    root.render(
-      React.createElement(MessagesPanel.make, {
-        messages: props.messages ?? [],
-        onClear: props.onClear ?? (() => {}),
-        onReplay: props.onReplay ?? (() => {}),
-        onReopen: props.onReopen ?? (() => {}),
-      }),
-    );
+const render = (props) =>
+  mount(MessagesPanel.make, {
+    messages: props.messages ?? [],
+    onClear: props.onClear ?? (() => {}),
+    onReplay: props.onReplay ?? (() => {}),
+    onReopen: props.onReopen ?? (() => {}),
   });
-  return container;
-};
-
-const click = async (element) => {
-  await act(async () => {
-    element.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-  });
-};
 
 describe("MessagesPanel", () => {
   test("renders the local time, direction, duration and method of each call", async () => {

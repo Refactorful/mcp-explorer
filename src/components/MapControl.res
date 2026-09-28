@@ -34,9 +34,6 @@ let reservedPairs = (value: option<JSON.t>, reserved: array<string>): array<(str
 let rowsToObject = (rows: array<row>): JSON.t =>
   JSON.Encode.object(Dict.fromArray(rows->Array.map(row => (row.key, row.value))))
 
-let nextId = (rows: array<row>): int =>
-  rows->Array.reduce(0, (max, row) => row.id >= max ? row.id + 1 : max)
-
 let uniqueKey = (rows: array<row>, base: string): string => {
   let exists = candidate => rows->Array.some(row => row.key == candidate)
   if !exists(base) {
@@ -85,18 +82,10 @@ let make = (
   ~onValidityChange: bool => unit,
   ~renderValue: (string, option<JSON.t>, JSON.t => unit) => React.element,
 ) => {
-  let (rows, setRows) = React.useState(() => rowsFromValue(value, reserved))
-
-  // Re-sync when the value changes from the outside (e.g. JSON mode or Reset).
-  // Our own changes round-trip through the parent, so the comparison matches.
-  React.useEffect1(
-    () => {
-      if rowsToObject(rowsFromValue(value, reserved))->JSON.stringify != rowsToObject(rows)->JSON.stringify {
-        setRows(_ => rowsFromValue(value, reserved))
-      }
-      None
-    },
-    [value],
+  let (rows, setRows) = UseSyncedRows.use(
+    ~value,
+    ~fromJson=value => rowsFromValue(value, reserved),
+    ~toJson=rowsToObject,
   )
 
   let invalid = invalidKeys(rows, minProperties, maxProperties, keyPatterns, allowAdditional)
@@ -123,7 +112,16 @@ let make = (
 
   let add = () =>
     commit(
-      Array.concat(rows, [{id: nextId(rows), key: uniqueKey(rows, "key"), value: newValue}]),
+      Array.concat(
+        rows,
+        [
+          {
+            id: UseSyncedRows.nextId(rows, row => row.id),
+            key: uniqueKey(rows, "key"),
+            value: newValue,
+          },
+        ],
+      ),
     )
 
   let updateKey = (id: int, key: string) =>

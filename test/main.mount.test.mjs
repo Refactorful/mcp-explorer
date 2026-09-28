@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { act } from "react";
+import { jsonResponse, waitFor } from "./helpers.mjs";
 
 beforeEach(() => {
   document.body.innerHTML = '<div id="mcp-explorer"></div><div id="root"></div>';
@@ -8,54 +9,23 @@ beforeEach(() => {
   globalThis.fetch = vi.fn(async (_url, init) => {
     const method = init && init.body ? JSON.parse(init.body).method : undefined;
     if (method === "tools/list") {
-      return new Response(
-        JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          result: {
-            tools: [
-              {
-                name: "add",
-                description: "Add two integers",
-                inputSchema: { type: "object", properties: {} },
-              },
-            ],
+      return jsonResponse({
+        tools: [
+          {
+            name: "add",
+            description: "Add two integers",
+            inputSchema: { type: "object", properties: {} },
           },
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
+        ],
+      });
     }
-    return new Response(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        result: {
-          resultType: "complete",
-          supportedVersions: ["2026-07-28"],
-          capabilities: { tools: {} },
-        },
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    );
+    return jsonResponse({
+      resultType: "complete",
+      supportedVersions: ["2026-07-28"],
+      capabilities: { tools: {} },
+    });
   });
 });
-
-const flush = async () => {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-};
-
-const waitFor = async (predicate, timeout = 2000) => {
-  const start = Date.now();
-  while (Date.now() - start < timeout) {
-    await flush();
-    if (predicate()) {
-      return;
-    }
-  }
-  throw new Error("timed out waiting for condition");
-};
 
 const execCheckbox = (container) => container.querySelector('input[type="checkbox"]');
 

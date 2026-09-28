@@ -19,9 +19,6 @@ let itemsFromValue = (value: option<JSON.t>): array<item> =>
 let toArray = (items: array<item>): JSON.t =>
   JSON.Encode.array(items->Array.map(item => item.value))
 
-let nextId = (items: array<item>): int =>
-  items->Array.reduce(0, (max, item) => item.id >= max ? item.id + 1 : max)
-
 let indexOf = (items: array<item>, id: int): int => {
   let rec loop = index =>
     if index >= Array.length(items) {
@@ -44,17 +41,7 @@ let make = (
   ~onValidityChange: bool => unit,
   ~renderItem: (int, option<JSON.t>, JSON.t => unit) => React.element,
 ) => {
-  let (items, setItems) = React.useState(() => itemsFromValue(value))
-
-  React.useEffect1(
-    () => {
-      if toArray(itemsFromValue(value))->JSON.stringify != toArray(items)->JSON.stringify {
-        setItems(_ => itemsFromValue(value))
-      }
-      None
-    },
-    [value],
-  )
+  let (items, setItems) = UseSyncedRows.use(~value, ~fromJson=itemsFromValue, ~toJson=toArray)
 
   let length = Array.length(items)
   let overMax = maxItems->Option.map(max => length > max)->Option.getOr(false)
@@ -74,7 +61,10 @@ let make = (
     onChange(toArray(next))
   }
 
-  let add = () => commit(Array.concat(items, [{id: nextId(items), value: newValue(length)}]))
+  let add = () =>
+    commit(
+      Array.concat(items, [{id: UseSyncedRows.nextId(items, item => item.id), value: newValue(length)}]),
+    )
 
   let update = (id: int, value: JSON.t) =>
     commit(items->Array.map(item => item.id == id ? {...item, value} : item))

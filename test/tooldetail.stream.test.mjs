@@ -1,46 +1,13 @@
 // @vitest-environment jsdom
 import { describe, test, expect, vi } from "vitest";
-import * as React from "react";
 import { act } from "react";
-import { createRoot } from "react-dom/client";
 import * as ToolDetail from "../src/components/ToolDetail.res.mjs";
-
-const encoder = new TextEncoder();
-
-const sseResponse = (chunks) =>
-  new Response(
-    new ReadableStream({
-      start(controller) {
-        for (const chunk of chunks) {
-          controller.enqueue(encoder.encode(chunk));
-        }
-        controller.close();
-      },
-    }),
-    { status: 200, headers: { "Content-Type": "text/event-stream" } },
-  );
+import { mount, sseResponse, waitFor } from "./helpers.mjs";
 
 const tool = {
   name: "echo",
   description: "Echo text",
   inputSchema: { type: "object", properties: {} },
-};
-
-const flush = async () => {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-};
-
-const waitFor = async (predicate, timeout = 2000) => {
-  const start = Date.now();
-  while (Date.now() - start < timeout) {
-    await flush();
-    if (predicate()) {
-      return;
-    }
-  }
-  throw new Error("timed out waiting for condition");
 };
 
 describe("ToolDetail streaming", () => {
@@ -53,20 +20,11 @@ describe("ToolDetail streaming", () => {
       ]),
     );
 
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(
-        React.createElement(ToolDetail.make, {
-          tool,
-          endpoint: "/mcp",
-          execEnabled: true,
-          onBack: () => {},
-          reopen: undefined,
-        }),
-      );
+    const container = await mount(ToolDetail.make, {
+      tool,
+      endpoint: "/mcp",
+      execEnabled: true,
+      onBack: () => {},
     });
 
     await act(async () => {

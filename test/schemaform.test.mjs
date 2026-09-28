@@ -1,17 +1,5 @@
 import { describe, test, expect } from "vitest";
-import * as React from "react";
-import { renderToString } from "react-dom/server";
-import * as SchemaForm from "../src/components/SchemaForm.res.mjs";
-
-const render = (schema, value) =>
-  renderToString(
-    React.createElement(SchemaForm.make, {
-      schema,
-      value,
-      onChange: () => {},
-      onValidityChange: () => {},
-    }),
-  );
+import { renderSchemaForm as render } from "./helpers.mjs";
 
 describe("SchemaForm", () => {
   test("renders enum values as a select", () => {

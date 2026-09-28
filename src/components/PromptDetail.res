@@ -42,6 +42,21 @@ let make = (
     request()->ignore
   }
 
+  let renderResult = (result: Protocol.promptResult) =>
+    <div>
+      {result.messages
+      ->Array.mapWithIndex((message, index) =>
+        <div
+          key={Int.toString(index)}
+          className={"message " ++ Protocol.roleToString(message.role)}>
+          <div className="message-role"> {Protocol.roleToString(message.role)->React.string} </div>
+          <ContentView block={message.content} />
+        </div>
+      )
+      ->React.array}
+      <JsonBlock value={result->Protocol.promptResultToJson} label="Raw JSON" />
+    </div>
+
   <div className="detail">
     <div className="detail-header">
       <button className="btn back-btn" onClick={_ => onBack()}>
@@ -82,31 +97,7 @@ let make = (
       </section>
       <section className="detail-col">
         <h3> {"Result"->React.string} </h3>
-        {switch state {
-        | Protocol.Idle => <div className="muted"> {"Not run yet."->React.string} </div>
-        | Protocol.Loading => <div className="muted"> {"Loading…"->React.string} </div>
-        | Protocol.Failure(err) =>
-          <div className="error-box"> {Protocol.apiErrorToString(err)->React.string} </div>
-        | Protocol.Success(result) =>
-          <div>
-            {result.messages
-            ->Array.mapWithIndex((message, index) =>
-              <div key={Int.toString(index)} className={"message " ++ Protocol.roleToString(message.role)}>
-                <div className="message-role">
-                  {Protocol.roleToString(message.role)->React.string}
-                </div>
-                <ContentView block={message.content} />
-              </div>
-            )
-            ->React.array}
-            <details className="content-json">
-              <summary> {"Raw JSON"->React.string} </summary>
-              <pre className="code-block">
-                {result->Protocol.promptResultToJson->Schema.pretty->React.string}
-              </pre>
-            </details>
-          </div>
-        }}
+        {RequestState.render(~state, ~loading="Loading…", ~success=renderResult)}
       </section>
     </div>
   </div>

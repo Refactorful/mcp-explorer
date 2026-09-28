@@ -1,32 +1,15 @@
 // @vitest-environment jsdom
 import { describe, test, expect } from "vitest";
 import * as React from "react";
-import { renderToString } from "react-dom/server";
 import { act } from "react";
-import { createRoot } from "react-dom/client";
-import * as SchemaForm from "../src/components/SchemaForm.res.mjs";
 import * as MapControl from "../src/components/MapControl.res.mjs";
-
-const render = (schema, value) =>
-  renderToString(
-    React.createElement(SchemaForm.make, {
-      schema,
-      value,
-      onChange: () => {},
-      onValidityChange: () => {},
-    }),
-  );
-
-const setInputValue = (input, value) => {
-  const setter = Object.getOwnPropertyDescriptor(
-    window.HTMLInputElement.prototype,
-    "value",
-  ).set;
-  setter.call(input, value);
-  input.dispatchEvent(new window.Event("input", { bubbles: true }));
-};
-
-const click = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+import {
+  dispatchClick as click,
+  mount,
+  mountSchemaForm,
+  renderSchemaForm as render,
+  setInputValue,
+} from "./helpers.mjs";
 
 describe("SchemaForm dictionaries (additionalProperties)", () => {
   test("renders a dictionary of strings to objects as nested fields", () => {
@@ -62,16 +45,7 @@ describe("SchemaForm dictionaries (additionalProperties)", () => {
 });
 
 describe("MapControl", () => {
-  const mount = async (props) => {
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    const root = createRoot(container);
-    await act(async () => {
-      root.render(React.createElement(MapControl.make, props));
-    });
-    return container;
-  };
+  const mountMap = (props) => mount(MapControl.make, props);
 
   const renderValue = (_key, current, onChange) =>
     React.createElement("input", {
@@ -82,7 +56,7 @@ describe("MapControl", () => {
 
   test("adds, renames, edits and removes entries", async () => {
     const changes = [];
-    const container = await mount({
+    const container = await mountMap({
       value: { a: "x" },
       newValue: "",
       reserved: [],
@@ -139,19 +113,9 @@ describe("SchemaForm map integration", () => {
       },
     };
     const changes = [];
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    const root = createRoot(container);
-    await act(async () => {
-      root.render(
-        React.createElement(SchemaForm.make, {
-          schema,
-          value: { attributes: {} },
-          onChange: (value) => changes.push(value),
-          onValidityChange: () => {},
-        }),
-      );
-    });
+    const container = await mountSchemaForm(schema, { attributes: {} }, (value) =>
+      changes.push(value),
+    );
 
     await act(async () => {
       click(container.querySelector(".map-add"));

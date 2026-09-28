@@ -1,7 +1,15 @@
-// Helpers for reading and updating JSON objects by key.
+// Helpers for reading, parsing and updating JSON values.
 //
 // `setField`/`removeField` return a fresh `JSON.Object` so React state changes
 // are always detected (mutating the underlying dict would not re-render).
+
+// Lenient parse: malformed text yields `None` instead of throwing.
+let parse = (text: string): option<JSON.t> =>
+  try {
+    Some(JSON.parseOrThrow(text))
+  } catch {
+  | JsExn(_) => None
+  }
 
 let getField = (json: JSON.t, name: string): option<JSON.t> =>
   switch JSON.Decode.object(json) {

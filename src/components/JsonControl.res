@@ -28,13 +28,7 @@ let make = (
           setError(_ => false)
           onValidityChange(true)
         | text =>
-          switch (
-            try {
-              Some(JSON.parseOrThrow(text))
-            } catch {
-            | JsExn(_) => None
-            }
-          ) {
+          switch JsonValue.parse(text) {
           | Some(json) =>
             setError(_ => false)
             onValidityChange(true)

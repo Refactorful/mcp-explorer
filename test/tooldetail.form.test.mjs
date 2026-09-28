@@ -1,9 +1,7 @@
 // @vitest-environment jsdom
 import { describe, test, expect } from "vitest";
-import * as React from "react";
-import { act } from "react";
-import { createRoot } from "react-dom/client";
 import * as ToolDetail from "../src/components/ToolDetail.res.mjs";
+import { click, mount } from "./helpers.mjs";
 
 const tool = {
   name: "convert_temperature",
@@ -19,23 +17,17 @@ const tool = {
   },
 };
 
+const props = (overrides = {}) => ({
+  tool,
+  endpoint: "/mcp",
+  execEnabled: true,
+  onBack: () => {},
+  ...overrides,
+});
+
 describe("ToolDetail form", () => {
   test("mounts a select for enums and a numeric input for numbers", async () => {
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(
-        React.createElement(ToolDetail.make, {
-          tool,
-          endpoint: "/mcp",
-          execEnabled: true,
-          onBack: () => {},
-        }),
-      );
-    });
+    const container = await mount(ToolDetail.make, props());
 
     expect(container.querySelectorAll("select").length).toBe(2);
     const patterns = [...container.querySelectorAll("input")].map((input) =>
@@ -51,49 +43,24 @@ describe("ToolDetail form", () => {
   });
 
   test("the back button invokes onBack", async () => {
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     let backCalls = 0;
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(
-        React.createElement(ToolDetail.make, {
-          tool,
-          endpoint: "/mcp",
-          execEnabled: true,
-          onBack: () => {
-            backCalls += 1;
-          },
-        }),
-      );
-    });
+    const container = await mount(
+      ToolDetail.make,
+      props({
+        onBack: () => {
+          backCalls += 1;
+        },
+      }),
+    );
 
     const back = container.querySelector(".back-btn");
     expect(back).not.toBeNull();
-    await act(async () => {
-      back.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-    });
+    await click(back);
     expect(backCalls).toBe(1);
   });
 
   test("disables the whole Try-it area and explains why when execution is off", async () => {
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(
-        React.createElement(ToolDetail.make, {
-          tool,
-          endpoint: "/mcp",
-          execEnabled: false,
-          onBack: () => {},
-        }),
-      );
-    });
+    const container = await mount(ToolDetail.make, props({ execEnabled: false }));
 
     const fieldset = container.querySelector("fieldset.tryit-fieldset");
     expect(fieldset).not.toBeNull();

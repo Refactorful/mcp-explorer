@@ -16,6 +16,24 @@ let sidebarIcon = (isOpen: bool): React.element =>
     {isOpen ? <path d="M8 9l3 3-3 3" /> : <path d="M11 9l-3 3 3 3" />}
   </svg>
 
+// Tools and prompts render through the same master list.
+let toItem = (name: string, description: option<string>): ItemList.item => {name, description}
+
+// The logged message to re-apply when `name` is reopened in a detail pane, if any.
+let reopenFor = (reopen: option<Message.reopen>, method: Protocol.method, name: string) =>
+  switch reopen {
+  | Some(r) if r.message.method == method && r.message.name == Some(name) => Some(r)
+  | _ => None
+  }
+
+// Remount key: a reopened pane gets a nonce so reopening the same item twice
+// re-applies its inputs.
+let detailKey = (name: string, reopen: option<Message.reopen>) =>
+  switch reopen {
+  | Some(r) => name ++ "#" ++ r.nonce->Int.toString
+  | None => name
+  }
+
 @react.component
 let make = (
   ~initialEndpoint: string,
@@ -75,17 +93,13 @@ let make = (
   let onReopen = (message: Message.t) => {
     let nonce = reopenNonce + 1
     setReopenNonce(_ => nonce)
-    switch message.Message.method {
-    | Protocol.ToolsCall =>
-      switch message.Message.name {
-      | Some(name) => navigate({tab: "Tools", name: Some(name)})
-      | None => ()
-      }
-    | Protocol.PromptsGet =>
-      switch message.Message.name {
-      | Some(name) => navigate({tab: "Prompts", name: Some(name)})
-      | None => ()
-      }
+    let tab = switch message.Message.method {
+    | Protocol.ToolsCall => Some("Tools")
+    | Protocol.PromptsGet => Some("Prompts")
+    | _ => None
+    }
+    switch (tab, message.Message.name) {
+    | (Some(tab), Some(name)) => navigate({tab, name: Some(name)})
     | _ => ()
     }
     setReopen(_ => Some({Message.nonce, message}))
@@ -161,14 +175,16 @@ let make = (
       </div>
 
     let listView = if isPrompts {
-      <PromptList
-        prompts
+      <ItemList
+        items={prompts->Array.map(prompt => toItem(prompt.name, prompt.description))}
+        empty="No prompts registered."
         selectedName=selectedPrompt
         onSelect={name => navigate({tab: "Prompts", name: Some(name)})}
       />
     } else {
-      <ToolList
-        tools
+      <ItemList
+        items={tools->Array.map(tool => toItem(tool.name, tool.description))}
+        empty="No tools registered."
         selectedName=selectedTool
         onSelect={name => navigate({tab: "Tools", name: Some(name)})}
       />
@@ -179,18 +195,9 @@ let make = (
         prompts->Array.find(prompt => prompt.name == name)
       ) {
       | Some(prompt) =>
-        let promptReopen = switch reopen {
-        | Some(r)
-          if r.message.method == Protocol.PromptsGet && r.message.name == Some(prompt.name) =>
-          Some(r)
-        | _ => None
-        }
-        let detailKey = switch promptReopen {
-        | Some(r) => prompt.name ++ "#" ++ r.nonce->Int.toString
-        | None => prompt.name
-        }
+        let promptReopen = reopenFor(reopen, Protocol.PromptsGet, prompt.name)
         <PromptDetail
-          key=detailKey
+          key={detailKey(prompt.name, promptReopen)}
           prompt
           endpoint
           reopen=promptReopen
@@ -201,17 +208,9 @@ let make = (
     } else {
       switch selectedTool->Option.flatMap(name => tools->Array.find(tool => tool.name == name)) {
       | Some(tool) =>
-        let toolReopen = switch reopen {
-        | Some(r) if r.message.method == Protocol.ToolsCall && r.message.name == Some(tool.name) =>
-          Some(r)
-        | _ => None
-        }
-        let detailKey = switch toolReopen {
-        | Some(r) => tool.name ++ "#" ++ r.nonce->Int.toString
-        | None => tool.name
-        }
+        let toolReopen = reopenFor(reopen, Protocol.ToolsCall, tool.name)
         <ToolDetail
-          key=detailKey
+          key={detailKey(tool.name, toolReopen)}
           tool
           endpoint
           execEnabled

@@ -31,13 +31,7 @@ let make = (
 
   let onTextChange = (text: string) => {
     setArgsText(_ => text)
-    switch (
-      try {
-        Some(JSON.parseOrThrow(text))
-      } catch {
-      | JsExn(_) => None
-      }
-    ) {
+    switch JsonValue.parse(text) {
     | Some(json) =>
       setParseError(_ => None)
       setArgs(_ => json)
@@ -57,12 +51,13 @@ let make = (
   }
 
   let client = Mcp.make(~endpoint)
-  let params = Dict.make()
-  params->Dict.set("name", JSON.Encode.string(tool.name))
-  params->Dict.set("arguments", args)
   let requestBody =
-    Mcp.envelope(~id=1, ~method=Protocol.ToolsCall, ~params=JSON.Encode.object(params), client)
-    ->JSON.stringify(~space=2)
+    Mcp.envelope(
+      ~id=1,
+      ~method=Protocol.ToolsCall,
+      ~params=Mcp.callParams(~name=tool.name, ~arguments=args),
+      client,
+    )->JSON.stringify(~space=2)
   let curl = Curl.forToolCall(~endpoint, ~name=tool.name, ~body=requestBody)
 
   let onRun = () => {
@@ -105,9 +100,7 @@ let make = (
                 | None => React.null
                 }}
               </div>
-              <pre className="code-block">
-                {event.Stream.payload->Schema.pretty->React.string}
-              </pre>
+              <JsonBlock value={event.Stream.payload} />
             </li>
           )
           ->React.array}
@@ -139,7 +132,7 @@ let make = (
           <span className="disclosure-label"> {"Input schema"->React.string} </span>
         </summary>
         <div className="disclosure-body">
-          <SchemaView schema={tool.inputSchema} />
+          <JsonBlock value={tool.inputSchema} />
           {requiredFields->Array.length > 0
             ? <p className="required-note">
                 {"Required: "->React.string}
@@ -190,12 +183,6 @@ let make = (
                 />
               : <JsonEditor value=argsText onChange=onTextChange error=parseError />}
             <div className="actions">
-              <button type_="submit" className="btn primary" disabled=runDisabled>
-                {"Run tool"->React.string}
-              </button>
-              <button type_="button" className="btn" onClick={_ => onReset()}>
-                {"Reset"->React.string}
-              </button>
               {!execEnabled
                 ? <span className="warning">
                     {"Execution disabled — the host controls this setting."->React.string}
@@ -203,6 +190,14 @@ let make = (
                 : mode == "form" && !formValid
                   ? <span className="warning"> {"Fix invalid JSON fields."->React.string} </span>
                   : React.null}
+              <div className="actions-buttons">
+                <button type_="submit" className="btn primary" disabled=runDisabled>
+                  {"Run tool"->React.string}
+                </button>
+                <button type_="button" className="btn" onClick={_ => onReset()}>
+                  {"Reset"->React.string}
+                </button>
+              </div>
             </div>
           </fieldset>
         </form>

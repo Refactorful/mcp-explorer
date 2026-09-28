@@ -40,6 +40,14 @@ let float: t<float> = (json, path) =>
 // structuredContent, resource blocks, ...).
 let unknown: t<JSON.t> = (json, _path) => Ok(json)
 
+// Every record decoder starts by requiring an object; `what` keeps the error
+// message precise ("expected tool object", ...).
+let objectOf = (json: JSON.t, path: string, what: string): result<dict<JSON.t>, string> =>
+  switch JSON.Decode.object(json) {
+  | Some(dict) => Ok(dict)
+  | None => error(path, "expected " ++ what ++ " object")
+  }
+
 let object: t<dict<JSON.t>> = (json, path) =>
   switch JSON.Decode.object(json) {
   | Some(v) => Ok(v)
@@ -88,18 +96,14 @@ let optField = (dict: dict<JSON.t>, name: string, inner: t<'a>): result<option<'
 // --- MCP shapes ---
 
 let media: t<Protocol.media> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected media object")
-  | Some(dict) =>
+  objectOf(json, path, "media")->Result.flatMap(dict =>
     field(dict, "data", string)->Result.flatMap(data =>
       field(dict, "mimeType", string)->Result.map(mimeType => {Protocol.data, mimeType})
     )
-  }
+  )
 
 let contentBlock: t<Protocol.contentBlock> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected content block object")
-  | Some(dict) =>
+  objectOf(json, path, "content block")->Result.flatMap(dict =>
     switch dict->Dict.get("type")->Option.flatMap(JSON.Decode.string) {
     | Some("text") => field(dict, "text", string)->Result.map(text => Protocol.Text(text))
     | Some("image") => media(json, path)->Result.map(m => Protocol.Image(m))
@@ -109,12 +113,10 @@ let contentBlock: t<Protocol.contentBlock> = (json, path) =>
     // Forward-compatible: unknown block kinds are preserved, not fatal.
     | Some(_) | None => Ok(Protocol.Unknown(json))
     }
-  }
+  )
 
 let tool: t<Protocol.tool> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected tool object")
-  | Some(dict) =>
+  objectOf(json, path, "tool")->Result.flatMap(dict =>
     field(dict, "name", string)->Result.flatMap(name =>
       optField(dict, "description", string)->Result.flatMap(description =>
         switch dict->Dict.get("inputSchema") {
@@ -124,24 +126,20 @@ let tool: t<Protocol.tool> = (json, path) =>
         }
       )
     )
-  }
+  )
 
 let promptArgument: t<Protocol.promptArgument> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected prompt argument object")
-  | Some(dict) =>
+  objectOf(json, path, "prompt argument")->Result.flatMap(dict =>
     field(dict, "name", string)->Result.flatMap(name =>
       optField(dict, "required", bool)->Result.map(required => {
         Protocol.name,
         required: required->Option.getOr(false),
       })
     )
-  }
+  )
 
 let prompt: t<Protocol.prompt> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected prompt object")
-  | Some(dict) =>
+  objectOf(json, path, "prompt")->Result.flatMap(dict =>
     field(dict, "name", string)->Result.flatMap(name =>
       optField(dict, "description", string)->Result.flatMap(description =>
         switch dict->Dict.get("arguments") {
@@ -153,7 +151,7 @@ let prompt: t<Protocol.prompt> = (json, path) =>
         }
       )
     )
-  }
+  )
 
 let role: t<Protocol.role> = (json, _path) =>
   switch JSON.Decode.string(json) {
@@ -163,18 +161,14 @@ let role: t<Protocol.role> = (json, _path) =>
   }
 
 let promptMessage: t<Protocol.promptMessage> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected prompt message object")
-  | Some(dict) =>
+  objectOf(json, path, "prompt message")->Result.flatMap(dict =>
     field(dict, "role", role)->Result.flatMap(role =>
       field(dict, "content", contentBlock)->Result.map(content => {Protocol.role, content})
     )
-  }
+  )
 
 let promptResult: t<Protocol.promptResult> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected prompts/get result object")
-  | Some(dict) =>
+  objectOf(json, path, "prompts/get result")->Result.flatMap(dict =>
     optField(dict, "description", string)->Result.flatMap(description =>
       switch dict->Dict.get("messages") {
       | Some(messages) =>
@@ -185,12 +179,10 @@ let promptResult: t<Protocol.promptResult> = (json, path) =>
       | None => Ok({Protocol.messages: [], description})
       }
     )
-  }
+  )
 
 let callResult: t<Protocol.callResult> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected tools/call result object")
-  | Some(dict) =>
+  objectOf(json, path, "tools/call result")->Result.flatMap(dict =>
     switch dict->Dict.get("content") {
     | Some(content) =>
       array(contentBlock, content, "content")->Result.flatMap(content =>
@@ -204,7 +196,7 @@ let callResult: t<Protocol.callResult> = (json, path) =>
       )
     | None => error(path, "missing content array")
     }
-  }
+  )
 
 let capability = (dict: dict<JSON.t>, name: string): bool =>
   switch dict->Dict.get(name) {
@@ -218,9 +210,7 @@ let capabilities = (dict: dict<JSON.t>): Protocol.capabilities => {
 }
 
 let discoverResult: t<Protocol.discoverResult> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected server/discover result object")
-  | Some(dict) =>
+  objectOf(json, path, "server/discover result")->Result.flatMap(dict =>
     field(dict, "supportedVersions", arrayOf(string))->Result.flatMap(supportedVersions =>
       optField(dict, "capabilities", object)->Result.flatMap(caps =>
         optField(dict, "instructions", string)->Result.map(instructions => {
@@ -233,18 +223,16 @@ let discoverResult: t<Protocol.discoverResult> = (json, path) =>
         })
       )
     )
-  }
+  )
 
 let jsonRpcError: t<Protocol.jsonRpcError> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected error object")
-  | Some(dict) =>
+  objectOf(json, path, "error")->Result.flatMap(dict =>
     field(dict, "code", int)->Result.flatMap(code =>
       field(dict, "message", string)->Result.flatMap(message =>
         optField(dict, "data", unknown)->Result.map(data => {Protocol.code, message, data})
       )
     )
-  }
+  )
 
 // The JSON-RPC envelope: exactly one of {result, error}.
 type envelope =
@@ -252,9 +240,7 @@ type envelope =
   | RpcFailure(Protocol.jsonRpcError)
 
 let responseEnvelope: (JSON.t, string) => result<envelope, string> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected JSON-RPC response object")
-  | Some(dict) =>
+  objectOf(json, path, "JSON-RPC response")->Result.flatMap(dict =>
     switch dict->Dict.get("error") {
     | Some(JSON.Null) | None =>
       switch dict->Dict.get("result") {
@@ -264,26 +250,27 @@ let responseEnvelope: (JSON.t, string) => result<envelope, string> = (json, path
     | Some(errJson) =>
       jsonRpcError(errJson, path ++ ".error")->Result.map(err => RpcFailure(err))
     }
-  }
+  )
 
 // --- list results (unwrap the arrays) ---
 
-let toolsResult: t<array<Protocol.tool>> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected tools/list result object")
-  | Some(dict) =>
-    switch dict->Dict.get("tools") {
-    | Some(tools) => array(tool, tools, path ++ ".tools")
+// Shared shape of `tools/list` and `prompts/list`: the array under `key`.
+let listResult = (
+  json: JSON.t,
+  path: string,
+  key: string,
+  what: string,
+  decoder: t<'a>,
+): result<array<'a>, string> =>
+  objectOf(json, path, what)->Result.flatMap(dict =>
+    switch dict->Dict.get(key) {
+    | Some(items) => array(decoder, items, path ++ "." ++ key)
     | None => Ok([])
     }
-  }
+  )
+
+let toolsResult: t<array<Protocol.tool>> = (json, path) =>
+  listResult(json, path, "tools", "tools/list result", tool)
 
 let promptsResult: t<array<Protocol.prompt>> = (json, path) =>
-  switch JSON.Decode.object(json) {
-  | None => error(path, "expected prompts/list result object")
-  | Some(dict) =>
-    switch dict->Dict.get("prompts") {
-    | Some(prompts) => array(prompt, prompts, path ++ ".prompts")
-    | None => Ok([])
-    }
-  }
+  listResult(json, path, "prompts", "prompts/list result", prompt)

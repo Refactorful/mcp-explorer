@@ -2,8 +2,6 @@
 
 let shellEscape = value => "'" ++ value->String.replaceAll("'", "'\\''") ++ "'"
 
-let protocolVersion = "2026-07-28"
-
 let currentOrigin = (): string =>
   %raw(`(typeof window !== "undefined" && window.location && window.location.origin) || ""`)
 
@@ -25,14 +23,12 @@ let absolute = (endpoint: string): string =>
   }
 
 let forToolCall = (~endpoint: string, ~name: string, ~body: string): string => {
-  let lines = [
-    "curl -sS " ++ endpoint->absolute->shellEscape ++ " \\",
-    "  -H 'Content-Type: application/json' \\",
-    "  -H 'Accept: application/json, text/event-stream' \\",
-    "  -H 'MCP-Protocol-Version: " ++ protocolVersion ++ "' \\",
-    "  -H 'Mcp-Method: tools/call' \\",
-    "  -H " ++ ("Mcp-Name: " ++ name)->shellEscape ++ " \\",
-    "  --data " ++ body->shellEscape,
-  ]
-  lines->Array.join("\n")
+  // Derive the header list from the transport so the export cannot drift from
+  // what `Mcp.post` actually sends.
+  let headers = Mcp.headersFor(Protocol.ToolsCall)->Array.concat([("Mcp-Name", name)])
+  let lines = Array.concat(
+    ["curl -sS " ++ endpoint->absolute->shellEscape ++ " \\"],
+    headers->Array.map(((key, value)) => "  -H " ++ (key ++ ": " ++ value)->shellEscape ++ " \\"),
+  )
+  Array.concat(lines, ["  --data " ++ body->shellEscape])->Array.join("\n")
 }

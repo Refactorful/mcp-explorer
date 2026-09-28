@@ -62,16 +62,32 @@ let envelope = (~id: int, ~method: Protocol.method, ~params: JSON.t, client: t):
 
 let emptyParams = (): JSON.t => JSON.Encode.object(Dict.make())
 
+// The `tools/call` params object, shared with the cURL preview in the UI.
+let callParams = (~name: string, ~arguments: JSON.t): JSON.t => {
+  let params = Dict.make()
+  params->Dict.set("name", JSON.Encode.string(name))
+  params->Dict.set("arguments", arguments)
+  JSON.Encode.object(params)
+}
+
 let parseBody = (text: string): result<JSON.t, Protocol.apiError> =>
-  try {
-    Ok(JSON.parseOrThrow(text))
-  } catch {
-  | JsExn(_) => Error(Protocol.ProtocolMismatch("response was not valid JSON"))
+  switch JsonValue.parse(text) {
+  | Some(json) => Ok(json)
+  | None => Error(Protocol.ProtocolMismatch("response was not valid JSON"))
   }
 
 let decodeResult = (decoder: Codec.t<'a>, json: JSON.t): result<'a, Protocol.apiError> =>
   switch decoder(json, "$") {
   | Ok(v) => Ok(v)
+  | Error(e) => Error(Protocol.Decode(e))
+  }
+
+// Unwrap a JSON-RPC envelope, mapping {error} and malformed shapes onto the
+// typed error surface. Shared by the JSON-body and SSE response paths.
+let unwrapEnvelope = (json: JSON.t): result<JSON.t, Protocol.apiError> =>
+  switch Codec.responseEnvelope(json, "$") {
+  | Ok(Codec.Success(result)) => Ok(result)
+  | Ok(Codec.RpcFailure(err)) => Error(Protocol.JsonRpc(err))
   | Error(e) => Error(Protocol.Decode(e))
   }
 
@@ -110,15 +126,15 @@ let post = async (
     switch parseBody(text) {
     | Error(_) as err => err
     | Ok(json) =>
-      switch Codec.responseEnvelope(json, "$") {
-      | Ok(Codec.Success(result)) => Ok(result)
-      | Ok(Codec.RpcFailure(err)) => Error(Protocol.JsonRpc(err))
-      | Error(e) =>
+      switch unwrapEnvelope(json) {
+      | Ok(result) => Ok(result)
+      | Error(Protocol.Decode(_)) as err =>
         if response->Fetch.Response.ok {
-          Error(Protocol.Decode(e))
+          err
         } else {
           Error(Protocol.Http(response->Fetch.Response.status, text))
         }
+      | Error(err) => Error(err)
       }
     }
 
@@ -135,14 +151,7 @@ let post = async (
       }
     let onMessage = (json: JSON.t) =>
       if isFinal(json) {
-        finalResult :=
-          Some(
-            switch Codec.responseEnvelope(json, "$") {
-            | Ok(Codec.Success(result)) => Ok(result)
-            | Ok(Codec.RpcFailure(err)) => Error(Protocol.JsonRpc(err))
-            | Error(e) => Error(Protocol.Decode(e))
-            },
-          )
+        finalResult := Some(unwrapEnvelope(json))
       } else {
         emit(json)
       }
@@ -230,14 +239,30 @@ let replay = async (
   let _ = await post(client, ~method, ~name, ~params)
 }
 
+// POST one request and decode its result. Optional args are trailing so callers
+// pass only what they need.
+let request = async (
+  client: t,
+  ~method: Protocol.method,
+  ~decoder: Codec.t<'a>,
+  ~name: option<string>=?,
+  ~params: JSON.t=emptyParams(),
+  ~onEvent: option<Stream.t => unit>=?,
+): result<'a, Protocol.apiError> => {
+  let response = await post(client, ~method, ~name, ~params, ~onEvent?)
+  response->Result.flatMap(json => decodeResult(decoder, json))
+}
+
 let discover = async (client: t): result<Protocol.discoverResult, Protocol.apiError> => {
-  let response = await post(client, ~method=Protocol.Discover, ~name=None, ~params=emptyParams())
-  response->Result.flatMap(json => decodeResult(Codec.discoverResult, json))
+  await request(client, ~method=Protocol.Discover, ~decoder=Codec.discoverResult)
 }
 
 let listTools = async (client: t): result<array<Protocol.tool>, Protocol.apiError> => {
-  let response = await post(client, ~method=Protocol.ToolsList, ~name=None, ~params=emptyParams())
-  response->Result.flatMap(json => decodeResult(Codec.toolsResult, json))
+  await request(client, ~method=Protocol.ToolsList, ~decoder=Codec.toolsResult)
+}
+
+let listPrompts = async (client: t): result<array<Protocol.prompt>, Protocol.apiError> => {
+  await request(client, ~method=Protocol.PromptsList, ~decoder=Codec.promptsResult)
 }
 
 let callTool = async (
@@ -246,22 +271,14 @@ let callTool = async (
   ~arguments: JSON.t,
   ~onEvent: option<Stream.t => unit>=?,
 ): result<Protocol.callResult, Protocol.apiError> => {
-  let params = Dict.make()
-  params->Dict.set("name", JSON.Encode.string(name))
-  params->Dict.set("arguments", arguments)
-  let response = await post(
+  await request(
     client,
     ~method=Protocol.ToolsCall,
-    ~name=Some(name),
-    ~params=JSON.Encode.object(params),
+    ~name,
+    ~params=callParams(~name, ~arguments),
     ~onEvent?,
+    ~decoder=Codec.callResult,
   )
-  response->Result.flatMap(json => decodeResult(Codec.callResult, json))
-}
-
-let listPrompts = async (client: t): result<array<Protocol.prompt>, Protocol.apiError> => {
-  let response = await post(client, ~method=Protocol.PromptsList, ~name=None, ~params=emptyParams())
-  response->Result.flatMap(json => decodeResult(Codec.promptsResult, json))
 }
 
 let getPrompt = async (
@@ -277,12 +294,12 @@ let getPrompt = async (
   let params = Dict.make()
   params->Dict.set("name", JSON.Encode.string(name))
   params->Dict.set("arguments", JSON.Encode.object(argsJson))
-  let response = await post(
+  await request(
     client,
     ~method=Protocol.PromptsGet,
-    ~name=Some(name),
+    ~name,
     ~params=JSON.Encode.object(params),
     ~onEvent?,
+    ~decoder=Codec.promptResult,
   )
-  response->Result.flatMap(json => decodeResult(Codec.promptResult, json))
 }

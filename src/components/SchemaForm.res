@@ -28,16 +28,10 @@ type widget =
 let effective = Schema.effective
 
 let enumOf = (schema: JSON.t): option<array<JSON.t>> =>
-  switch JSON.Decode.object(schema) {
-  | Some(dict) => dict->Dict.get("enum")->Option.flatMap(JSON.Decode.array)
-  | None => None
-  }
+  JsonValue.getField(schema, "enum")->Option.flatMap(JSON.Decode.array)
 
 let descriptionOf = (schema: JSON.t): option<string> =>
-  switch JSON.Decode.object(schema) {
-  | Some(dict) => dict->Dict.get("description")->Option.flatMap(JSON.Decode.string)
-  | None => None
-  }
+  JsonValue.getField(schema, "description")->Option.flatMap(JSON.Decode.string)
 
 let mapOrJson = (schema: JSON.t): widget =>
   switch Schema.additionalPropertiesOf(schema) {
@@ -385,7 +379,13 @@ and renderControl = (
   ~reportError: (string, bool) => unit,
   ~path: string,
   ~depth: int,
-): React.element =>
+): React.element => {
+  let onNumberChange = (value: option<float>) =>
+    switch value {
+    | Some(number) => onValue(JSON.Encode.float(number))
+    | None => onClear()
+    }
+
   switch classify(resolved) {
   | Object =>
     let nestedValue = current->Option.getOr(JSON.Encode.object(Dict.make()))
@@ -414,20 +414,8 @@ and renderControl = (
     renderVariant(~resolved, ~branches, ~current, ~required, ~root, ~onValue, ~reportError, ~path, ~depth)
   | Select(values) => renderSelect(~values, ~current, ~required, ~onChange=onValue)
   | Checkbox => renderCheckbox(~current, ~onChange=value => onValue(JSON.Encode.bool(value)))
-  | Integer =>
-    renderNumber(~current, ~integer=true, ~required, ~onChange=value =>
-      switch value {
-      | Some(number) => onValue(JSON.Encode.float(number))
-      | None => onClear()
-      }
-    )
-  | Number =>
-    renderNumber(~current, ~integer=false, ~required, ~onChange=value =>
-      switch value {
-      | Some(number) => onValue(JSON.Encode.float(number))
-      | None => onClear()
-      }
-    )
+  | Integer => renderNumber(~current, ~integer=true, ~required, ~onChange=onNumberChange)
+  | Number => renderNumber(~current, ~integer=false, ~required, ~onChange=onNumberChange)
   | Text =>
     renderText(~current, ~required, ~onChange=text =>
       switch text {
@@ -443,6 +431,28 @@ and renderControl = (
       onValidityChange={valid => reportError(path, valid)}
     />
   }
+}
+and renderChild = (
+  ~schema: JSON.t,
+  ~current: option<JSON.t>,
+  ~root: JSON.t,
+  ~set: JSON.t => unit,
+  ~reportError: (string, bool) => unit,
+  ~path: string,
+  ~depth: int,
+  ~required: bool=false,
+): React.element =>
+  renderControl(
+    ~resolved=effective(schema, root, 0),
+    ~current,
+    ~required,
+    ~root,
+    ~onValue=set,
+    ~onClear=() => set(JSON.Encode.null),
+    ~reportError,
+    ~path,
+    ~depth=depth + 1,
+  )
 and renderExtraMap = (
   ~resolved: JSON.t,
   ~current: option<JSON.t>,
@@ -472,16 +482,14 @@ and renderExtraMap = (
     onChange=onValue
     onValidityChange={valid => reportError(validityPath, valid)}
     renderValue={(key, entryValue, setEntryValue) =>
-      renderControl(
-        ~resolved=effective(valueSchemaForKey(key, extra, patterns), root, 0),
+      renderChild(
+        ~schema=valueSchemaForKey(key, extra, patterns),
         ~current=entryValue,
-        ~required=false,
         ~root,
-        ~onValue=setEntryValue,
-        ~onClear=() => setEntryValue(JSON.Encode.null),
+        ~set=setEntryValue,
         ~reportError,
         ~path=path == "" ? key : path ++ "." ++ key,
-        ~depth=depth + 1,
+        ~depth,
       )
     }
   />
@@ -516,16 +524,14 @@ and renderArray = (
       | Some(items) if index < Array.length(items) => Array.getUnsafe(items, index)
       | _ => itemSchema
       }
-      renderControl(
-        ~resolved=effective(schema, root, 0),
+      renderChild(
+        ~schema,
         ~current=itemValue,
-        ~required=false,
         ~root,
-        ~onValue=setItemValue,
-        ~onClear=() => setItemValue(JSON.Encode.null),
+        ~set=setItemValue,
         ~reportError,
         ~path=path ++ "[" ++ Int.toString(index) ++ "]",
-        ~depth=depth + 1,
+        ~depth,
       )
     }}
   />
@@ -555,16 +561,15 @@ and renderVariant = (
     initialIndex=initial
     onChange=onValue
     renderBranch={(index, branchValue, setBranchValue) =>
-      renderControl(
-        ~resolved=Array.getUnsafe(effectiveBranches, index),
+      renderChild(
+        ~schema=Array.getUnsafe(effectiveBranches, index),
         ~current=branchValue,
         ~required,
         ~root,
-        ~onValue=setBranchValue,
-        ~onClear=() => setBranchValue(JSON.Encode.null),
+        ~set=setBranchValue,
         ~reportError,
         ~path,
-        ~depth=depth + 1,
+        ~depth,
       )
     }
   />

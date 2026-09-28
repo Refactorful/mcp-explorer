@@ -36,26 +36,6 @@ let resolveRef = (dict: dict<JSON.t>, root: JSON.t): option<JSON.t> =>
   | None => None
   }
 
-// A JSON-Schema `type` may be a single string or an array of strings (a union,
-// e.g. `["string", "null"]`). `typeOf` reports the first non-`null` member.
-let typeOf = (dict: dict<JSON.t>): option<string> =>
-  switch dict->Dict.get("type") {
-  | Some(JSON.String(type_)) => Some(type_)
-  | Some(json) =>
-    switch JSON.Decode.array(json) {
-    | Some(items) => items->Array.filterMap(JSON.Decode.string)->Array.find(item => item != "null")
-    | None => None
-    }
-  | None => None
-  }
-
-let parseStringJSON = (text: string): option<JSON.t> =>
-  try {
-    Some(JSON.parseOrThrow(text))
-  } catch {
-  | JsExn(_) => None
-  }
-
 // Schemas occasionally declare a `default` whose JSON type disagrees with the
 // declared `type` (e.g. `"default": "[]"` for a `type: "array"` field). Sending
 // that verbatim causes a server-side conversion error, so coerce the default to
@@ -66,7 +46,7 @@ let coerceToType = (value: JSON.t, type_: option<string>): JSON.t =>
     switch JSON.Decode.array(value) {
     | Some(_) => value
     | None =>
-      switch JSON.Decode.string(value)->Option.flatMap(parseStringJSON) {
+      switch JSON.Decode.string(value)->Option.flatMap(JsonValue.parse) {
       | Some(parsed) =>
         switch JSON.Decode.array(parsed) {
         | Some(_) => parsed
@@ -79,7 +59,7 @@ let coerceToType = (value: JSON.t, type_: option<string>): JSON.t =>
     switch JSON.Decode.object(value) {
     | Some(_) => value
     | None =>
-      switch JSON.Decode.string(value)->Option.flatMap(parseStringJSON) {
+      switch JSON.Decode.string(value)->Option.flatMap(JsonValue.parse) {
       | Some(parsed) =>
         switch JSON.Decode.object(parsed) {
         | Some(_) => parsed
@@ -135,13 +115,9 @@ let deref = (schema: JSON.t, root: JSON.t): JSON.t =>
   }
 
 let typesOf = (schema: JSON.t): array<string> =>
-  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("type")) {
+  switch JsonValue.getField(schema, "type") {
   | Some(JSON.String(type_)) => [type_]
-  | Some(json) =>
-    switch JSON.Decode.array(json) {
-    | Some(items) => items->Array.filterMap(JSON.Decode.string)
-    | None => []
-    }
+  | Some(json) => JSON.Decode.array(json)->Option.getOr([])->Array.filterMap(JSON.Decode.string)
   | None => []
   }
 
@@ -151,109 +127,70 @@ let primaryType = (schema: JSON.t): option<string> =>
 let isNullable = (schema: JSON.t): bool =>
   typesOf(schema)->Array.some(item => item == "null")
 
-let constOf = (schema: JSON.t): option<JSON.t> =>
-  switch JSON.Decode.object(schema) {
-  | Some(dict) => dict->Dict.get("const")
-  | None => None
+let nonEmptyArray = (json: JSON.t): option<array<JSON.t>> =>
+  switch JSON.Decode.array(json) {
+  | Some(items) if Array.length(items) > 0 => Some(items)
+  | _ => None
   }
+
+let constOf = (schema: JSON.t): option<JSON.t> => JsonValue.getField(schema, "const")
 
 let titleOf = (schema: JSON.t): option<string> =>
-  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("title")) {
-  | Some(json) => JSON.Decode.string(json)
-  | None => None
-  }
+  JsonValue.getField(schema, "title")->Option.flatMap(JSON.Decode.string)
 
 let variantsOf = (schema: JSON.t): option<array<JSON.t>> =>
-  switch JSON.Decode.object(schema) {
-  | Some(dict) =>
-    switch dict->Dict.get("oneOf")->Option.flatMap(JSON.Decode.array) {
-    | Some(items) if Array.length(items) > 0 => Some(items)
-    | _ =>
-      switch dict->Dict.get("anyOf")->Option.flatMap(JSON.Decode.array) {
-      | Some(items) if Array.length(items) > 0 => Some(items)
-      | _ => None
-      }
-    }
-  | None => None
+  switch JsonValue.getField(schema, "oneOf")->Option.flatMap(nonEmptyArray) {
+  | Some(items) => Some(items)
+  | None => JsonValue.getField(schema, "anyOf")->Option.flatMap(nonEmptyArray)
   }
 
 let discriminatorOf = (schema: JSON.t): option<string> =>
-  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("discriminator")) {
-  | Some(json) =>
-    switch JSON.Decode.object(json)->Option.flatMap(dict => dict->Dict.get("propertyName")) {
-    | Some(propertyName) => JSON.Decode.string(propertyName)
-    | None => None
-    }
-  | None => None
-  }
+  JsonValue.getField(schema, "discriminator")
+  ->Option.flatMap(JSON.Decode.object)
+  ->Option.flatMap(dict => dict->Dict.get("propertyName"))
+  ->Option.flatMap(JSON.Decode.string)
 
 // `additionalProperties` describes an arbitrary map: the value schema (or `true`
 // for untyped values). `false` means no extra keys, so there is nothing to edit.
 let additionalPropertiesOf = (schema: JSON.t): option<JSON.t> =>
-  switch JSON.Decode.object(schema) {
-  | Some(dict) =>
-    switch dict->Dict.get("additionalProperties") {
-    | Some(JSON.Boolean(false)) => None
-    | Some(value) => Some(value)
-    | None => None
-    }
+  switch JsonValue.getField(schema, "additionalProperties") {
+  | Some(JSON.Boolean(false)) => None
+  | Some(value) => Some(value)
   | None => None
   }
 
 let patternPropertiesOf = (schema: JSON.t): option<array<(string, JSON.t)>> =>
-  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("patternProperties")) {
-  | Some(json) =>
-    switch JSON.Decode.object(json) {
-    | Some(patterns) =>
-      switch patterns->Dict.toArray {
-      | [] => None
-      | entries => Some(entries)
-      }
-    | None => None
+  switch JsonValue.getField(schema, "patternProperties")->Option.flatMap(JSON.Decode.object) {
+  | Some(patterns) =>
+    switch patterns->Dict.toArray {
+    | [] => None
+    | entries => Some(entries)
     }
   | None => None
   }
 
 let propertiesOf = (schema: JSON.t): option<dict<JSON.t>> =>
-  switch JSON.Decode.object(schema) {
-  | Some(dict) => dict->Dict.get("properties")->Option.flatMap(JSON.Decode.object)
-  | None => None
-  }
+  JsonValue.getField(schema, "properties")->Option.flatMap(JSON.Decode.object)
 
 let propertyNames = (schema: JSON.t): array<string> =>
-  switch propertiesOf(schema) {
-  | Some(properties) => properties->Dict.keysToArray
-  | None => []
-  }
+  propertiesOf(schema)->Option.getOr(Dict.make())->Dict.keysToArray
 
 let requiredOf = (schema: JSON.t): array<string> =>
-  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("required")) {
-  | Some(json) =>
-    switch JSON.Decode.array(json) {
-    | Some(items) => items->Array.filterMap(JSON.Decode.string)
-    | None => []
-    }
-  | None => []
-  }
+  JsonValue.getField(schema, "required")
+  ->Option.flatMap(JSON.Decode.array)
+  ->Option.getOr([])
+  ->Array.filterMap(JSON.Decode.string)
 
 // 2020-12 `prefixItems` (or draft-07 `items` as an array) describes a tuple.
 let tupleItemsOf = (schema: JSON.t): option<array<JSON.t>> =>
-  switch JSON.Decode.object(schema) {
-  | Some(dict) =>
-    switch dict->Dict.get("prefixItems")->Option.flatMap(JSON.Decode.array) {
-    | Some(items) if Array.length(items) > 0 => Some(items)
-    | _ =>
-      switch dict->Dict.get("items") {
-      | Some(json) => JSON.Decode.array(json)
-      | None => None
-      }
-    }
-  | None => None
+  switch JsonValue.getField(schema, "prefixItems")->Option.flatMap(nonEmptyArray) {
+  | Some(items) => Some(items)
+  | None => JsonValue.getField(schema, "items")->Option.flatMap(JSON.Decode.array)
   }
 
 // Singular `items` schema (objects only; an array `items` is a tuple).
 let itemSchemaOf = (schema: JSON.t): option<JSON.t> =>
-  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get("items")) {
+  switch JsonValue.getField(schema, "items") {
   | Some(json) =>
     switch JSON.Decode.object(json) {
     | Some(_) => Some(json)
@@ -263,10 +200,7 @@ let itemSchemaOf = (schema: JSON.t): option<JSON.t> =>
   }
 
 let intField = (schema: JSON.t, name: string): option<int> =>
-  switch JSON.Decode.object(schema)->Option.flatMap(dict => dict->Dict.get(name)) {
-  | Some(json) => JSON.Decode.float(json)->Option.map(Float.toInt)
-  | None => None
-  }
+  JsonValue.getField(schema, name)->Option.flatMap(JSON.Decode.float)->Option.map(Float.toInt)
 
 let minItemsOf = (schema: JSON.t): int => intField(schema, "minItems")->Option.getOr(0)
 let maxItemsOf = (schema: JSON.t): option<int> => intField(schema, "maxItems")
@@ -359,7 +293,7 @@ let rec defaultFor = (schema: JSON.t, root: JSON.t, depth: int): JSON.t =>
       | Some(resolved) => defaultFor(resolved, root, depth + 1)
       | None =>
         switch dict->Dict.get("default") {
-        | Some(value) => coerceToType(value, typeOf(dict))
+        | Some(value) => coerceToType(value, primaryType(schema))
         | None =>
           switch constOf(schema) {
           | Some(value) => value
@@ -367,7 +301,7 @@ let rec defaultFor = (schema: JSON.t, root: JSON.t, depth: int): JSON.t =>
           switch enumDefault(dict) {
           | Some(value) => value
           | None =>
-            switch typeOf(dict) {
+            switch primaryType(schema) {
             | Some("object") => objectDefault(dict, root, depth)
             | Some("array") => JSON.Encode.array([])
             | Some("string") => JSON.Encode.string("")
@@ -388,9 +322,9 @@ let rec defaultFor = (schema: JSON.t, root: JSON.t, depth: int): JSON.t =>
   }
   }
 and enumDefault = (dict: dict<JSON.t>): option<JSON.t> =>
-  switch dict->Dict.get("enum")->Option.flatMap(JSON.Decode.array) {
-  | Some(items) if Array.length(items) > 0 => Some(Array.getUnsafe(items, 0))
-  | _ => None
+  switch dict->Dict.get("enum")->Option.flatMap(nonEmptyArray) {
+  | Some(items) => Some(Array.getUnsafe(items, 0))
+  | None => None
   }
 and objectDefault = (dict: dict<JSON.t>, root: JSON.t, depth: int): JSON.t => {
   let out = Dict.make()
@@ -405,10 +339,9 @@ and objectDefault = (dict: dict<JSON.t>, root: JSON.t, depth: int): JSON.t => {
 }
 and compositionDefault = (dict: dict<JSON.t>, root: JSON.t, depth: int): option<JSON.t> => {
   let pick = key =>
-    switch dict->Dict.get(key)->Option.flatMap(JSON.Decode.array) {
-    | Some(items) if Array.length(items) > 0 =>
-      Some(defaultFor(Array.getUnsafe(items, 0), root, depth + 1))
-    | _ => None
+    switch dict->Dict.get(key)->Option.flatMap(nonEmptyArray) {
+    | Some(items) => Some(defaultFor(Array.getUnsafe(items, 0), root, depth + 1))
+    | None => None
     }
   switch pick("allOf") {
   | Some(value) => Some(value)
@@ -427,14 +360,7 @@ let defaultsFromSchema = (schema: JSON.t): JSON.t => defaultFor(schema, schema, 
 // the enclosing document's `$defs`).
 let defaultsWithRoot = (schema: JSON.t, root: JSON.t): JSON.t => defaultFor(schema, root, 0)
 
-let requiredFields = (schema: JSON.t): array<string> =>
-  switch JSON.Decode.object(schema) {
-  | None => []
-  | Some(dict) =>
-    switch dict->Dict.get("required")->Option.flatMap(JSON.Decode.array) {
-    | Some(items) => items->Array.filterMap(JSON.Decode.string)
-    | None => []
-    }
-  }
+// Alias kept for the UI-facing name.
+let requiredFields = requiredOf
 
 let pretty = (json: JSON.t): string => JSON.stringify(json, ~space=2)

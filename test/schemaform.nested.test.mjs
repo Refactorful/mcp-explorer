@@ -1,45 +1,15 @@
 // @vitest-environment jsdom
 import { describe, test, expect } from "vitest";
-import * as React from "react";
-import { renderToString } from "react-dom/server";
 import { act } from "react";
-import { createRoot } from "react-dom/client";
 import * as Schema from "../src/api/Schema.res.mjs";
-import * as SchemaForm from "../src/components/SchemaForm.res.mjs";
+import {
+  dispatchClick as click,
+  mountSchemaForm as mountForm,
+  renderSchemaForm as render,
+  setInputValue,
+} from "./helpers.mjs";
 
 const parse = (text) => JSON.parse(text);
-
-const render = (schema, value) =>
-  renderToString(
-    React.createElement(SchemaForm.make, {
-      schema,
-      value,
-      onChange: () => {},
-      onValidityChange: () => {},
-    }),
-  );
-
-const mountForm = async (schema, value, onChange = () => {}) => {
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  await act(async () => {
-    root.render(
-      React.createElement(SchemaForm.make, { schema, value, onChange, onValidityChange: () => {} }),
-    );
-  });
-  return container;
-};
-
-const setInputValue = (input, value) => {
-  const setter = Object.getOwnPropertyDescriptor(
-    window.HTMLInputElement.prototype,
-    "value",
-  ).set;
-  setter.call(input, value);
-  input.dispatchEvent(new window.Event("input", { bubbles: true }));
-};
 
 const setSelectValue = (select, value) => {
   const setter = Object.getOwnPropertyDescriptor(
@@ -49,8 +19,6 @@ const setSelectValue = (select, value) => {
   setter.call(select, value);
   select.dispatchEvent(new window.Event("change", { bubbles: true }));
 };
-
-const click = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
 
 describe("Schema composition helpers", () => {
   test("collapses allOf, merging properties and required", () => {

@@ -31,13 +31,13 @@ let make = (
     <div className="message-detail">
       <div className="message-section">
         <h4> {"Request"->React.string} </h4>
-        <pre className="code-block"> {message.request->Schema.pretty->React.string} </pre>
+        <JsonBlock value={message.request} />
       </div>
       {switch message.response {
       | Some(response) =>
         <div className="message-section">
           <h4> {"Response"->React.string} </h4>
-          <pre className="code-block"> {response->Schema.pretty->React.string} </pre>
+          <JsonBlock value=response />
         </div>
       | None => React.null
       }}

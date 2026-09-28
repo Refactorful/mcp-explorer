@@ -460,6 +460,14 @@ body {
   margin: 12px 0;
 }
 
+/* Keep the action buttons on the right edge, warnings on the left. */
+.actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
 .warning {
   color: var(--warning);
   font-size: 12px;

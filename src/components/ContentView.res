@@ -13,19 +13,7 @@ let make = (~block: Protocol.contentBlock) =>
     <div className="content-media">
       <audio controls=true src={mimeSrc(media)} />
     </div>
-  | Protocol.ResourceLink(json) =>
-    <details className="content-json">
-      <summary> {"resource_link"->React.string} </summary>
-      <pre className="code-block"> {json->Schema.pretty->React.string} </pre>
-    </details>
-  | Protocol.Resource(json) =>
-    <details className="content-json">
-      <summary> {"resource"->React.string} </summary>
-      <pre className="code-block"> {json->Schema.pretty->React.string} </pre>
-    </details>
-  | Protocol.Unknown(json) =>
-    <details className="content-json">
-      <summary> {"unknown content block"->React.string} </summary>
-      <pre className="code-block"> {json->Schema.pretty->React.string} </pre>
-    </details>
+  | Protocol.ResourceLink(json) => <JsonBlock value=json label="resource_link" />
+  | Protocol.Resource(json) => <JsonBlock value=json label="resource" />
+  | Protocol.Unknown(json) => <JsonBlock value=json label="unknown content block" />
   }

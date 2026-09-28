@@ -2,24 +2,7 @@ import { describe, test, expect, vi, beforeEach } from "vitest";
 import * as Mcp from "../src/api/Mcp.res.mjs";
 import * as Sse from "../src/api/Sse.res.mjs";
 import * as MessageStore from "../src/MessageStore.res.mjs";
-
-const encoder = new TextEncoder();
-
-const sseBody = (chunks) =>
-  new ReadableStream({
-    start(controller) {
-      for (const chunk of chunks) {
-        controller.enqueue(encoder.encode(chunk));
-      }
-      controller.close();
-    },
-  });
-
-const sseResponse = (chunks) =>
-  new Response(sseBody(chunks), {
-    status: 200,
-    headers: { "Content-Type": "text/event-stream" },
-  });
+import { sseBody, sseResponse } from "./helpers.mjs";
 
 beforeEach(() => {
   MessageStore.clear();

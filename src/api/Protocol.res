@@ -19,8 +19,6 @@ let wire = method =>
   | PromptsGet => "prompts/get"
   }
 
-let methodToString = wire
-
 // --- content blocks (mirror MCP_CONTENT_TYPES in serialization.jl) ---
 type media = {data: string, mimeType: string}
 
