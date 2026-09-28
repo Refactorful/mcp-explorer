@@ -89,6 +89,28 @@ body {
   margin-left: auto;
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo {
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  /* Optical nudge: the tall title line-box makes geometric centering read low. */
+  position: relative;
+  top: -2px;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .brand h1 {
   margin: 0;
   font-size: 22px;

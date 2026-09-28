@@ -1,3 +1,6 @@
+// App icon (same artwork as the favicon and the bundled `icon.svg`).
+@module("../assets/icon-compass.svg") external brandLogo: string = "default"
+
 // Decorative sidebar toggle glyph (a panel + a chevron that flips when open).
 // Kept as a plain helper so `make` stays the only React component in the module.
 let sidebarIcon = (isOpen: bool): React.element =>
@@ -243,8 +246,11 @@ let make = (
     <header className="app-header">
       <div className="app-header-left">
         <div className="brand">
-          <h1> {"MCP Explorer"->React.string} </h1>
-          <span className="subtitle"> {"MCP server inspector"->React.string} </span>
+          <img className="brand-logo" src={brandLogo} alt="" ariaHidden=true />
+          <div className="brand-text">
+            <h1> {"MCP Explorer"->React.string} </h1>
+            <span className="subtitle"> {"MCP server inspector"->React.string} </span>
+          </div>
         </div>
         <ConfigBar
           endpoint
