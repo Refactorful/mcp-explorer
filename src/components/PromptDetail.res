@@ -28,12 +28,16 @@ let make = (
       previous->Array.map(((key, current)) => key == name ? (key, value) : (key, current))
     )
 
-  let missing = prompt.arguments->Array.some(argument => argument.required && valueOf(argument.name) == "")
+  let isBlank = (value: string) => value->String.trim == ""
+
+  let missing = prompt.arguments->Array.some(argument => argument.required && isBlank(valueOf(argument.name)))
 
   let onRun = () => {
     setState(_ => Protocol.Loading)
     let client = Mcp.make(~endpoint)
-    let arguments = Dict.fromArray(values)
+    // Blank optional arguments are left out of the request entirely: servers
+    // reject empty strings for arguments the caller is not providing.
+    let arguments = values->Array.filter(((_, value)) => !isBlank(value))->Dict.fromArray
     let request = async () =>
       switch await Mcp.getPrompt(client, ~name=prompt.name, ~arguments) {
       | Ok(value) => setState(_ => Protocol.Success(value))

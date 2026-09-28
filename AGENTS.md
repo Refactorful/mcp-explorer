@@ -270,7 +270,10 @@ invalid value. Keep that behavior.
   cycle). `Schema.res` owns schema normalisation (`effective` collapses
   `allOf`/`$ref`, `primaryType`/`isNullable`, tuple/pattern helpers).
 - Execution toggle defaults **on in `vite dev`, off in production**.
-- Prompts tab is hidden unless `capabilities.prompts`.
+- Prompts tab is hidden unless `capabilities.prompts`. `prompts/get` only sends
+  arguments that were filled in: blank/whitespace-only optional arguments are
+  omitted (servers reject empty strings), and a whitespace-only required
+  argument keeps the Get button disabled.
 
 ## Workflow checklist
 

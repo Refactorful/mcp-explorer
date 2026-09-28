@@ -50,7 +50,23 @@ if (discover) {
   }
 
   if (discover.capabilities.prompts) {
-    expectOk("prompts/list", await Mcp.listPrompts(client));
+    const prompts = expectOk("prompts/list", await Mcp.listPrompts(client));
+    if (prompts && prompts.length > 0) {
+      const prompt = prompts[0];
+      // Fill required arguments with a placeholder and leave optional ones out,
+      // mirroring what the viewer sends when they are left blank.
+      const args = Object.fromEntries(
+        (prompt.arguments ?? [])
+          .filter((argument) => argument.required)
+          .map((argument) => [argument.name, "test"]),
+      );
+      expectOk(
+        `prompts/get ${prompt.name}`,
+        await Mcp.getPrompt(client, prompt.name, args),
+      );
+    } else {
+      console.log("\n(no prompts registered; skipping prompts/get)");
+    }
   } else {
     console.log("\n(server advertises no prompts capability; skipping prompts/list)");
   }

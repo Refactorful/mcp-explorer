@@ -80,8 +80,9 @@ It takes a config object and returns an `{ unmount }` handle. Options:
 - **Streaming:** when a call answers with `text/event-stream`, notifications
   such as `notifications/progress` appear live in a "Stream" log before the
   final result.
-- **Prompt viewer:** argument form, rendered messages, raw JSON. The tab is
-  hidden when the server does not advertise prompts.
+- **Prompt viewer:** argument form, rendered messages, raw JSON. Blank optional
+  arguments are omitted from `prompts/get`; the tab is hidden when the server
+  does not advertise prompts.
 - **Messages sidebar:** every request is logged with its wire method,
   round-trip time, direction, and raw payloads. Replay a request or reopen it
   in the detail pane.
