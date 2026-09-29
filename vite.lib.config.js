@@ -21,8 +21,8 @@ export default defineConfig({
       // the public global so it can't overwrite the callable `window.McpExplorer`.
       name: "McpExplorerBundle",
       formats: ["iife"],
-      fileName: () => "mcpexplorer.js",
-      cssFileName: "mcpexplorer",
+      fileName: () => "index.js",
+      cssFileName: "styles",
     },
   },
 });

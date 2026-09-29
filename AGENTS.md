@@ -12,7 +12,7 @@ passed in at mount time.
 
 Three build artifacts are committed under `bundle/mcpexplorer/`:
 
-- `mcpexplorer.js` + `mcpexplorer.css` — self-contained IIFE exposing the
+- `index.js` + `styles.css` — self-contained IIFE exposing the
   `window.McpExplorer` function (the embeddable integration).
 - `index.html` — standalone single-file page that mounts itself.
 - `icon.svg` — app icon (copied from `assets/icon-compass.svg`). The standalone

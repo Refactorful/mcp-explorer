@@ -2,8 +2,8 @@
 // from disk:
 //
 //   dist/index.html            -> bundle/mcpexplorer/index.html        (standalone page)
-//   dist-lib/mcpexplorer.js    -> bundle/mcpexplorer/mcpexplorer.js    (global mount)
-//   dist-lib/mcpexplorer.css   -> bundle/mcpexplorer/mcpexplorer.css   (global mount)
+//   dist-lib/index.js          -> bundle/mcpexplorer/index.js          (global mount)
+//   dist-lib/styles.css        -> bundle/mcpexplorer/styles.css        (global mount)
 //   assets/icon-compass.svg    -> bundle/mcpexplorer/icon.svg          (favicon for hosts)
 //
 // Run via `npm run bundle` (build + copy).
@@ -16,8 +16,8 @@ const targetDir = resolve(here, "..", "bundle", "mcpexplorer");
 
 const files = [
   [resolve(here, "..", "dist", "index.html"), "index.html"],
-  [resolve(here, "..", "dist-lib", "mcpexplorer.js"), "mcpexplorer.js"],
-  [resolve(here, "..", "dist-lib", "mcpexplorer.css"), "mcpexplorer.css"],
+  [resolve(here, "..", "dist-lib", "index.js"), "index.js"],
+  [resolve(here, "..", "dist-lib", "styles.css"), "styles.css"],
   [resolve(here, "..", "assets", "icon-compass.svg"), "icon.svg"],
 ];
 

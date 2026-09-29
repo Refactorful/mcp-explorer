@@ -6,13 +6,38 @@ invokes tools through a schema-driven "Try it" form, and reads resources.
 
 There is no host dependency — you pass the MCP endpoint in when you mount it.
 
+## Install
+
+```sh
+npm install @refactorful/mcp-explorer
+```
+
+The package ships the prebuilt bundle. Importing it registers the global, then
+mount it (see below):
+
+```js
+import "@refactorful/mcp-explorer/styles.css"; // viewer styles
+import "@refactorful/mcp-explorer"; // registers window.McpExplorer
+```
+
+Or load it from a CDN without installing:
+
+```html
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/@refactorful/mcp-explorer/styles.css"
+/>
+<script src="https://unpkg.com/@refactorful/mcp-explorer"></script>
+```
+
 ## The bundle
 
-Everything you need is in `bundle/mcpexplorer/`:
+Prefer to self-host? The same files live in `bundle/mcpexplorer/` and are also
+included in the npm tarball:
 
 | File | Purpose |
 | --- | --- |
-| `mcpexplorer.js` + `mcpexplorer.css` | Self-contained IIFE exposing `window.McpExplorer`. This is the embeddable integration. |
+| `index.js` + `styles.css` | Self-contained IIFE exposing `window.McpExplorer`. This is the embeddable integration. |
 | `index.html` | Standalone single-file page that mounts itself. |
 | `icon.svg` | App icon, for the host page favicon. |
 
@@ -23,8 +48,8 @@ Load the JS and CSS on any page, drop in an empty container, and mount:
 ```html
 <div id="mcp-explorer"></div>
 <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-<link rel="stylesheet" href="/docs/mcp/mcpexplorer.css" />
-<script src="/docs/mcp/mcpexplorer.js"></script>
+<link rel="stylesheet" href="/docs/mcp/styles.css" />
+<script src="/docs/mcp/index.js"></script>
 <script>
   const viewer = window.McpExplorer({
     endpoint: "/mcp",          // MCP URL (absolute or same-origin path)

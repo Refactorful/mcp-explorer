@@ -1,9 +1,47 @@
 {
-  "name": "mcp-explorer",
+  "name": "@refactorful/mcp-explorer",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "description": "Typed, offline single-page viewer for any MCP server (ReScript + React).",
+  "description": "Offline single-page viewer for any MCP server.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/refactorful/mcp-explorer.git"
+  },
+  "homepage": "https://github.com/refactorful/mcp-explorer#readme",
+  "bugs": {
+    "url": "https://github.com/refactorful/mcp-explorer/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "viewer",
+    "explorer",
+    "debugging",
+    "rescript",
+    "react"
+  ],
+  "files": [
+    "bundle/mcpexplorer"
+  ],
+  "main": "bundle/mcpexplorer/index.js",
+  "style": "bundle/mcpexplorer/styles.css",
+  "unpkg": "bundle/mcpexplorer/index.js",
+  "jsdelivr": "bundle/mcpexplorer/index.js",
+  "exports": {
+    ".": "./bundle/mcpexplorer/index.js",
+    "./index.js": "./bundle/mcpexplorer/index.js",
+    "./styles.css": "./bundle/mcpexplorer/styles.css",
+    "./icon.svg": "./bundle/mcpexplorer/icon.svg",
+    "./index.html": "./bundle/mcpexplorer/index.html",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "res:build": "rescript build",
     "res:watch": "rescript build -w",
@@ -16,18 +54,17 @@
     "test": "rescript build && vitest run",
     "test:watch": "vitest",
     "validate:live": "node scripts/validate-live.mjs",
-    "bundle": "npm run build && node scripts/copy-bundle.mjs"
-  },
-  "dependencies": {
-    "@glennsl/rescript-fetch": "0.3.0",
-    "@rescript/react": "0.15.0",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "rescript": "12.3.1"
+    "bundle": "npm run build && node scripts/copy-bundle.mjs",
+    "prepublishOnly": "npm run bundle"
   },
   "devDependencies": {
+    "@glennsl/rescript-fetch": "0.3.0",
     "@jihchi/vite-plugin-rescript": "7.2.0",
+    "@rescript/react": "0.15.0",
     "jsdom": "^27.4.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "rescript": "12.3.1",
     "vite": "8.3.1",
     "vite-plugin-singlefile": "2.3.3",
     "vitest": "5.0.2"
