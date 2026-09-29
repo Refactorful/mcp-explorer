@@ -6,11 +6,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/refactorful/mcp-explorer.git"
+    "url": "git+https://github.com/Refactorful/mcp-explorer.git"
   },
-  "homepage": "https://github.com/refactorful/mcp-explorer#readme",
+  "homepage": "https://github.com/Refactorful/mcp-explorer#readme",
   "bugs": {
-    "url": "https://github.com/refactorful/mcp-explorer/issues"
+    "url": "https://github.com/Refactorful/mcp-explorer/issues"
   },
   "keywords": [
     "mcp",
