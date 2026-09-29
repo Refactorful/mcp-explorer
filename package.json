@@ -2,7 +2,7 @@
   "name": "@refactorful/mcp-explorer",
   "version": "0.1.0",
   "type": "module",
-  "description": "Offline single-page viewer for any MCP server.",
+  "description": "Browse, invoke, and debug tools, prompts, and resources on any MCP server from an offline single-page viewer",
   "license": "MIT",
   "repository": {
     "type": "git",
