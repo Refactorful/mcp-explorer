@@ -1,10 +1,40 @@
+<p align="center">
+  <img src="assets/icon-compass.svg" alt="MCP Explorer" width="96" />
+</p>
+
 # MCP Explorer
 
-A same-origin, offline-capable single-page viewer for **any MCP server**, written
-in **ReScript + React**. It discovers and renders tools, prompts and resources,
-invokes tools through a schema-driven "Try it" form, and reads resources.
+[![npm version](https://img.shields.io/npm/v/@refactorful/mcp-explorer.svg)](https://www.npmjs.com/package/@refactorful/mcp-explorer)
+[![license](https://img.shields.io/npm/l/@refactorful/mcp-explorer.svg)](LICENSE)
+[![bundle workflow](https://github.com/Refactorful/mcp-explorer/actions/workflows/bundle.yml/badge.svg)](https://github.com/Refactorful/mcp-explorer/actions/workflows/bundle.yml)
 
-There is no host dependency — you pass the MCP endpoint in when you mount it.
+An offline single-page debugger for any
+[Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server.
+MCP Explorer discovers and renders **tools, prompts and resources**, executes
+tools through a schema-driven "Try it" form, reads resources, and logs every
+JSON-RPC message live so you can see exactly what the server sent back.
+
+Written in **ReScript + React**. No backend and no host dependency: you pass
+the MCP endpoint in when you mount it.
+
+## Features
+
+- **Explore any MCP server:** tools, prompts and resources, including
+  parameterized resource templates. Tabs appear only when the server
+  advertises them.
+- **Execute tools:** a schema-driven "Try it" form with Form/JSON toggle,
+  `Result` / `Raw` / `cURL` views, and Reset. Nested objects, maps, arrays,
+  unions and defaults render as real controls; unrecognized shapes fall back
+  to a JSON editor.
+- **Streaming:** `text/event-stream` notifications such as progress appear
+  live in a "Stream" log before the final result.
+- **Message log:** every request with its wire method, timing, direction and
+  raw payloads. Replay a request or reopen it in the detail pane.
+- **Protocol:** JSON-RPC 2.0, modern `2026-07-28` MCP era (no initialize
+  handshake): `server/discover`, then `tools/list`, `prompts/list` and
+  `resources/list` when advertised.
+- **Navigation:** master-detail split with browser history, collapsing to a
+  single pane on narrow screens.
 
 ## Install
 
@@ -12,12 +42,13 @@ There is no host dependency — you pass the MCP endpoint in when you mount it.
 npm install @refactorful/mcp-explorer
 ```
 
-The package ships the prebuilt bundle. Importing it registers the global, then
-mount it (see below):
+The package ships the prebuilt bundle. Import it, then mount it on any page:
 
 ```js
 import "@refactorful/mcp-explorer/styles.css"; // viewer styles
 import "@refactorful/mcp-explorer"; // registers window.McpExplorer
+
+window.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer" });
 ```
 
 Or load it from a CDN without installing:
@@ -30,10 +61,10 @@ Or load it from a CDN without installing:
 <script src="https://unpkg.com/@refactorful/mcp-explorer"></script>
 ```
 
-## The bundle
+### Self-hosting
 
-Prefer to self-host? The same files live in `bundle/mcpexplorer/` and are also
-included in the npm tarball:
+Prefer to serve the files yourself? They live in `bundle/mcpexplorer/` and are
+also included in the npm tarball:
 
 | File | Purpose |
 | --- | --- |
@@ -41,7 +72,7 @@ included in the npm tarball:
 | `index.html` | Standalone single-file page that mounts itself. |
 | `icon.svg` | App icon, for the host page favicon. |
 
-## Embedding
+## Usage
 
 Load the JS and CSS on any page, drop in an empty container, and mount:
 
@@ -63,13 +94,13 @@ Load the JS and CSS on any page, drop in an empty container, and mount:
 
 It takes a config object and returns an `{ unmount }` handle. Options:
 
-- **`endpoint`** (alias `url`) — the MCP URL to call. Defaults to `"/mcp"`.
-- **`domId`** (alias `dom_id`) — id of an empty container element. Defaults to
+- **`endpoint`** (alias `url`): the MCP URL to call. Defaults to `"/mcp"`.
+- **`domId`** (alias `dom_id`): id of an empty container element. Defaults to
   `"mcp-explorer"`.
-- **`execEnabled`** — turns tool execution on or off for this mount. When
+- **`execEnabled`**: turns tool execution on or off for this mount. When
   omitted, the build default applies (on in `vite dev`, off in production). It
   is fixed for the lifetime of the mount; there is no in-app toggle.
-- **`endpointEditable`** — defaults to `true`. Set to `false` to pin the viewer
+- **`endpointEditable`**: defaults to `true`. Set to `false` to pin the viewer
   to a single server.
 
 `window.McpExplorer.mount(config)` is the same function, and
@@ -78,51 +109,28 @@ It takes a config object and returns an `{ unmount }` handle. Options:
 
 ### Standalone page
 
-`index.html` mounts itself with the same API:
+The bundle's `index.html` is a complete single-file page: the JS and CSS are
+inlined and the page mounts itself, so serving the file is enough. The mount
+call it ships with is:
 
-```html
-<div id="root"></div>
-<script type="module" src="/src/Main.res.mjs"></script>
-<script>
-  window.McpExplorer({ endpoint: "/mcp", domId: "root" });
-</script>
+```js
+window.McpExplorer({ endpoint: "/mcp", domId: "root" });
 ```
 
-## What it does
+Serve the file next to your MCP endpoint (or behind the same proxy) and it
+just runs.
 
-- Speaks JSON-RPC 2.0 to the configured endpoint using the modern
-  `2026-07-28` MCP era (no initialize handshake): `server/discover`, then
-  `tools/list`, `prompts/list` and `resources/list` /
-  `resources/templates/list` when advertised.
-- **Tool viewer:** name/description, a collapsible JSON-Schema inspector, a
-  schema-driven "Try it" form, and `Result`/`Raw`/`cURL` views.
-- **Schema-driven form:** one typed control per input — `enum`/`const` becomes
-  a select, `boolean` a checkbox, numbers validated inputs, strings text.
-  Nested objects (`$ref`/`$defs`/`allOf`), key/value maps
-  (`additionalProperties`/`patternProperties`), arrays and tuples,
-  `oneOf`/`anyOf` (with discriminator), and type unions all render as real
-  controls; only unrecognized shapes fall back to a JSON editor. Defaults
-  pre-fill and `required` fields use native validation.
-- **Streaming:** when a call answers with `text/event-stream`, notifications
-  such as `notifications/progress` appear live in a "Stream" log before the
-  final result.
-- **Prompt viewer:** argument form, rendered messages, raw JSON. Blank optional
-  arguments are omitted from `prompts/get`; the tab is hidden when the server
-  does not advertise prompts.
-- **Resource viewer:** resources by URI plus parameterized templates. Simple
-  RFC 6570 `{variable}` templates build the read URI from per-variable inputs
-  (complex expressions fall back to a raw URI field); reads render text,
-  images/audio and binary downloads with streamed `notifications/*` shown live.
-  The tab is hidden when the server does not advertise resources.
-- **Messages sidebar:** every request is logged with its wire method,
-  round-trip time, direction, and raw payloads. Replay a request or reopen it
-  in the detail pane.
-- **Navigation:** master–detail split with browser history support, collapsing
-  to a single pane on narrow screens.
+## Requirements
+
+- A browser. The viewer is static files, there is no server-side component.
+- The MCP endpoint must be reachable from the page that mounts the viewer:
+  same origin, behind a proxy, or CORS-enabled. Many MCP hosts reject
+  cross-origin requests (`OPTIONS` returns `405`, `POST` with an `Origin`
+  header returns `403`), so serving the viewer alongside the endpoint is the
+  happy path. The dev server proxies `/mcp` and strips `Origin` for you.
+- Node.js 20+ to build from source (not needed to use the bundle).
 
 ## Development
-
-Requires Node 20+.
 
 ```sh
 npm install
@@ -137,9 +145,8 @@ MCP_ENDPOINT=http://127.0.0.1:8080/mcp npm run validate:live
 ```
 
 In dev, the viewer proxies `/mcp` to `http://127.0.0.1:8080` (override with
-`MCP_DEV_TARGET`) and strips the `Origin` header, since many MCP hosts reject
-cross-origin requests with `403`. Keep the endpoint relative — an absolute URL
-bypasses the proxy and fails as a cross-origin request.
+`MCP_DEV_TARGET`). Keep the endpoint relative: an absolute URL bypasses the
+proxy and fails as a cross-origin request.
 
 ## Layout
 
@@ -149,7 +156,7 @@ src/api/              protocol, codecs, transport, SSE, schema
 src/components/       one React component per file
 test/                 Vitest unit tests + jsdom/SSR tests
 scripts/              copy-bundle, validate-live
-bundle/mcpexplorer/   committed build artifacts
+bundle/mcpexplorer/   generated build artifacts (rebuilt by npm run bundle)
 ```
 
 ## Notes
@@ -159,3 +166,7 @@ bundle/mcpexplorer/   committed build artifacts
   content-block types degrade gracefully rather than failing a call.
 - Versions are pinned exactly: `rescript` 12.3.1, `@rescript/react` 0.15.0,
   React 19.2.0, Vite 8.3.1, Vitest 5.0.2.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Copyright (c) 2026 Refactorful (Nathan Ortega).

@@ -15,9 +15,16 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "mcp-server",
+    "mcp-debugger",
+    "debugger",
+    "tools",
+    "prompts",
+    "resources",
+    "json-rpc",
+    "streamable-http",
     "viewer",
     "explorer",
-    "debugging",
     "rescript",
     "react"
   ],
