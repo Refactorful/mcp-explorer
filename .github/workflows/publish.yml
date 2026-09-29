@@ -18,6 +18,17 @@ jobs:
         with:
           node-version: 24
 
+      - name: Upgrade npm for trusted publishing
+        run: |
+          npm install -g npm@latest
+          node --version
+          npm --version
+          if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+            echo "OIDC token request URL is available"
+          else
+            echo "WARNING: OIDC env vars are not set (check id-token: write)"
+          fi
+
       - name: Verify tag matches package version
         run: |
           expected="v$(node -p "require('./package.json').version")"
