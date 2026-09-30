@@ -12,3 +12,4 @@ type assertion
 @send external toBeTruthy: assertion => unit = "toBeTruthy"
 @send external toBeFalsy: assertion => unit = "toBeFalsy"
 @send external toContain: (assertion, 'a) => unit = "toContain"
+@send external toThrow: assertion => unit = "toThrow"

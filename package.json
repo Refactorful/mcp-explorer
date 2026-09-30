@@ -1,6 +1,6 @@
 {
   "name": "@refactorful/mcp-explorer",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "type": "module",
   "description": "Offline single-page debugger for any MCP server",
   "license": "MIT",
@@ -14,29 +14,29 @@
   },
   "keywords": [
     "mcp",
+    "server",
     "model-context-protocol",
-    "mcp-server",
-    "mcp-debugger",
-    "debugger",
-    "tools",
-    "prompts",
-    "resources",
-    "json-rpc",
-    "streamable-http",
-    "viewer",
-    "explorer",
-    "rescript",
+    "modelcontextprotocol",
+    "ai",
     "react"
   ],
   "files": [
     "bundle/mcpexplorer"
   ],
-  "main": "bundle/mcpexplorer/index.js",
+  "main": "bundle/mcpexplorer/react.js",
+  "types": "bundle/mcpexplorer/react.d.ts",
   "style": "bundle/mcpexplorer/styles.css",
   "unpkg": "bundle/mcpexplorer/index.js",
   "jsdelivr": "bundle/mcpexplorer/index.js",
   "exports": {
-    ".": "./bundle/mcpexplorer/index.js",
+    ".": {
+      "types": "./bundle/mcpexplorer/react.d.ts",
+      "default": "./bundle/mcpexplorer/react.js"
+    },
+    "./react.js": {
+      "types": "./bundle/mcpexplorer/react.d.ts",
+      "default": "./bundle/mcpexplorer/react.js"
+    },
     "./index.js": "./bundle/mcpexplorer/index.js",
     "./styles.css": "./bundle/mcpexplorer/styles.css",
     "./icon.svg": "./bundle/mcpexplorer/icon.svg",
@@ -54,9 +54,10 @@
     "res:watch": "rescript build -w",
     "res:clean": "rescript clean",
     "dev": "vite",
-    "build": "rescript build && vite build && vite build --config vite.lib.config.js",
+    "build": "rescript build && vite build && vite build --config vite.lib.config.js && vite build --config vite.embed.config.js",
     "build:html": "rescript build && vite build",
     "build:lib": "vite build --config vite.lib.config.js",
+    "build:embed": "vite build --config vite.embed.config.js",
     "preview": "vite preview",
     "test": "rescript build && vitest run",
     "test:watch": "vitest",
@@ -75,5 +76,8 @@
     "vite": "8.3.1",
     "vite-plugin-singlefile": "2.3.3",
     "vitest": "5.0.2"
+  },
+  "peerDependencies": {
+    "react": ">=18"
   }
 }

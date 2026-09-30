@@ -47,6 +47,7 @@ Tests import the compiled `.res.mjs` files, not the sources.
 src/
   Main.res                 browser entry: window.McpExplorer({ ... }) mount API
   App.res                  tab shell + discovery state + master-detail split
+  Embed.res                React component entry (root export, renders App)
   Config.res               build-time dev/prod exec default (__MCP_EXPLORER_DEV__)
   Curl.res                 cURL export (resolves relative endpoint to origin)
   History.res              in-app navigation (History API bindings)
@@ -62,10 +63,11 @@ test/…                     *.res unit tests + *.test.mjs DOM/SSR tests
 scripts/{copy-bundle,validate-live}.mjs
 vite.config.js             single-file HTML build
 vite.lib.config.js         IIFE global build
-bundle/mcpexplorer/        committed build artifacts
+vite.embed.config.js       ESM React entry build (react external)
+bundle/mcpexplorer/        generated build artifacts (gitignored)
 ```
 
-`rescript.json`: `sources` = `src` + `test` (dev), `package-specs` esmodule
+`rescript.json`: `sources` = `src` + `scripts` + `test` (dev), `package-specs` esmodule
 in-source, suffix `.res.mjs`, `jsx` v4, `dependencies` (NOT the deprecated
 `bs-dependencies`).
 
@@ -256,6 +258,19 @@ invalid value. Keep that behavior.
 - `window.McpExplorer({ endpoint, domId })` (aliases `url`, `dom_id`; defaults
   `"/mcp"`, `"mcp-explorer"`), returns `{ unmount }`. `window.McpExplorer.mount(...)`
   is the same function; `window.McpExplorer("/mcp")` uses the string as `domId`.
+- The package root export is `src/Embed.res`, built by `vite.embed.config.js`
+  into `bundle/mcpexplorer/react.js`: a ReScript React component that renders
+  `<App />` directly with `react` external (`>= 18` peer dependency).
+  `./index.js` stays the imperative IIFE for non-React consumers and CDNs
+  (`unpkg`/`jsdelivr` point at it). ReScript value names are lowercase, so the
+  embed build appends `export { make as McpExplorer };`.
+- `bundle/mcpexplorer/react.d.ts` is hand-written (`assets/react.d.ts`, copied
+  by `scripts/copy-bundle.mjs`), not generated: genType's generated adapter
+  imports the compiled runtime module, so it can't ship as a declaration file.
+  Keep it in sync with `src/Embed.res` (props) and the
+  `export { make as McpExplorer }` footer in `vite.embed.config.js` (names);
+  `test/embed.types.test.mjs` pins the declared export names against both.
+  The public props interface is `McpExplorerProps`.
 - No injected globals. The standalone `index.html` mounts itself by calling the
   same API; embedded hosts do `window.McpExplorer({ endpoint, domId })`.
 - cURL export must be absolute: `Curl.absolute` prefixes `window.location.origin`
@@ -294,13 +309,28 @@ invalid value. Keep that behavior.
   reads use a raw URI input. Reads render text, images/audio and binary
   downloads, and the URI is mirrored into `Mcp-Name`.
 
+## Releases
+
+Publishing is version-driven; never create tags by hand.
+
+- `.github/workflows/publish.yml` runs on every push to `master`. It derives
+  `v<version>` from `package.json`, then skips if that release, tag, or npm
+  version already exists. Otherwise it runs tests, publishes to npm through OIDC
+  trusted publishing, and creates a GitHub release with the bundle zip. If npm
+  has the version but the release is missing, it creates only the release.
+- The npm trusted publisher is bound to the `publish.yml` filename; renaming the
+  workflow breaks publishing.
+- Cut a release with `npm version patch --no-git-tag-version`, commit, and push
+  to `master`.
+
 ## Workflow checklist
 
 1. Edit `.res` → `npx rescript build` (fix warnings; they're treated as
    signals).
 2. `npm test` (all tests, including DOM/SSR).
 3. `npm run validate:live` against `http://127.0.0.1:8080/mcp`.
-4. `npm run bundle` to refresh `bundle/mcpexplorer/*` and eyeball the diff.
+4. `npm run bundle` to rebuild `bundle/mcpexplorer/*` (gitignored; CI rebuilds
+   it during publish and on every master push).
 5. Keep the human-facing docs (`README.md`) in sync with behavior changes.
 
 Do not commit unless asked.

@@ -4,6 +4,8 @@
 //   dist/index.html            -> bundle/mcpexplorer/index.html        (standalone page)
 //   dist-lib/index.js          -> bundle/mcpexplorer/index.js          (global mount)
 //   dist-lib/styles.css        -> bundle/mcpexplorer/styles.css        (global mount)
+//   dist-embed/react.js        -> bundle/mcpexplorer/react.js          (React component entry)
+//   assets/react.d.ts          -> bundle/mcpexplorer/react.d.ts        (hand-written public types)
 //   assets/icon-compass.svg    -> bundle/mcpexplorer/icon.svg          (favicon for hosts)
 //
 // Run via `npm run bundle` (build + copy).
@@ -18,6 +20,8 @@ const files = [
   [resolve(here, "..", "dist", "index.html"), "index.html"],
   [resolve(here, "..", "dist-lib", "index.js"), "index.js"],
   [resolve(here, "..", "dist-lib", "styles.css"), "styles.css"],
+  [resolve(here, "..", "dist-embed", "react.js"), "react.js"],
+  [resolve(here, "..", "assets", "react.d.ts"), "react.d.ts"],
   [resolve(here, "..", "assets", "icon-compass.svg"), "icon.svg"],
 ];
 

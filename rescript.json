@@ -2,6 +2,7 @@
   "name": "@refactorful/mcp-explorer",
   "sources": [
     { "dir": "src", "subdirs": true },
+    { "dir": "scripts", "subdirs": true },
     { "dir": "test", "subdirs": true, "type": "dev" }
   ],
   "package-specs": [{ "module": "esmodule", "in-source": true }],

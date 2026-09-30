@@ -6,7 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@refactorful/mcp-explorer.svg)](https://www.npmjs.com/package/@refactorful/mcp-explorer)
 [![license](https://img.shields.io/npm/l/@refactorful/mcp-explorer.svg)](LICENSE)
-[![bundle workflow](https://github.com/Refactorful/mcp-explorer/actions/workflows/bundle.yml/badge.svg)](https://github.com/Refactorful/mcp-explorer/actions/workflows/bundle.yml)
+[![publish workflow](https://github.com/Refactorful/mcp-explorer/actions/workflows/publish.yml/badge.svg)](https://github.com/Refactorful/mcp-explorer/actions/workflows/publish.yml)
 
 An offline single-page debugger for any
 [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server.
@@ -42,16 +42,29 @@ the MCP endpoint in when you mount it.
 npm install @refactorful/mcp-explorer
 ```
 
-The package ships the prebuilt bundle. Import it, then mount it on any page:
+The package ships the prebuilt bundle. Use it as a React component (React 18+
+is a peer dependency):
+
+```jsx
+import "@refactorful/mcp-explorer/styles.css";
+import { McpExplorer } from "@refactorful/mcp-explorer";
+
+<McpExplorer endpoint="/mcp" execEnabled />
+```
+
+It accepts `endpoint`, `execEnabled` and `endpointEditable`, plus `className`
+for the wrapper element. TypeScript declarations are included.
+
+Or use the imperative global the component wraps:
 
 ```js
-import "@refactorful/mcp-explorer/styles.css"; // viewer styles
-import "@refactorful/mcp-explorer"; // registers window.McpExplorer
+import "@refactorful/mcp-explorer/styles.css";
+import "@refactorful/mcp-explorer/index.js"; // registers window.McpExplorer
 
 window.McpExplorer({ endpoint: "/mcp", domId: "mcp-explorer" });
 ```
 
-Or load it from a CDN without installing:
+Or load the global from a CDN without installing:
 
 ```html
 <link
@@ -148,10 +161,27 @@ In dev, the viewer proxies `/mcp` to `http://127.0.0.1:8080` (override with
 `MCP_DEV_TARGET`). Keep the endpoint relative: an absolute URL bypasses the
 proxy and fails as a cross-origin request.
 
+### Releases
+
+Publishing is version-driven, so you never tag by hand. Bump the version,
+commit, and push to master:
+
+```sh
+npm version patch --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "release 0.1.2"
+git push
+```
+
+The Publish workflow derives `v<version>` from package.json and skips versions
+that already have a tag, release, or npm version. Otherwise it runs the tests,
+publishes to npm with provenance, and creates a GitHub release with the bundle
+zip attached.
+
 ## Layout
 
 ```
-src/                  ReScript app (Main.res = mount API, App.res = shell)
+src/                  ReScript app (Main.res = API, Embed.res = React entry, App.res = shell)
 src/api/              protocol, codecs, transport, SSE, schema
 src/components/       one React component per file
 test/                 Vitest unit tests + jsdom/SSR tests
