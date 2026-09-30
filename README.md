@@ -19,7 +19,7 @@ JSON-RPC message live so you can see exactly what the server sent back.
 Written in **ReScript + React**. No backend and no host dependency: you pass
 the MCP endpoint in when you mount it.
 
-![MCP Explorer running the greet tool: filled Try it form, the result "Hello, Nate!", and the JSON-RPC message log](docs/tool-demo.png)
+![MCP Explorer running the greet tool: filled Try it form, the result "Hello, Nate!", and the JSON-RPC message log](docs/tool-demo-rounded.png)
 
 ## Features
 

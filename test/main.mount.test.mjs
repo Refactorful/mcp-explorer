@@ -53,7 +53,7 @@ describe("global mount API", () => {
 
     const container = document.getElementById("mcp-explorer");
     expect(container.textContent).toContain("MCP Explorer");
-    expect(container.textContent).toContain("MCP endpoint");
+    expect(container.textContent).toContain("MCP Endpoint");
   });
 
   test("accepts a shorthand domId string and returns an unmount handle", async () => {

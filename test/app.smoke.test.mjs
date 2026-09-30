@@ -13,7 +13,7 @@ describe("App", () => {
       }),
     );
     expect(html).toContain("MCP Explorer");
-    expect(html).toContain("MCP endpoint");
+    expect(html).toContain("MCP Endpoint");
     expect(html).not.toContain("Enable execution");
   });
 });
