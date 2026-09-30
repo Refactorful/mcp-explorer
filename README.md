@@ -28,8 +28,9 @@ the MCP endpoint in when you mount it.
   advertises them.
 - **Execute tools:** a schema-driven "Try it" form with Form/JSON toggle,
   `Result` / `Raw` / `cURL` views, and Reset. Nested objects, maps, arrays,
-  unions and defaults render as real controls; unrecognized shapes fall back
-  to a JSON editor.
+  unions and defaults render as real controls, with a subtle type hint
+  (`string[]`, `map<string, number>`, …) next to each field name;
+  unrecognized shapes fall back to a JSON editor.
 - **Streaming:** `text/event-stream` notifications such as progress appear
   live in a "Stream" log before the final result.
 - **Message log:** every request with its wire method, timing, direction and

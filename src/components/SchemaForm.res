@@ -75,11 +75,15 @@ let classify = (schema: JSON.t): widget =>
     }
   }
 
-let fieldLabel = (name, required, description) =>
+let fieldLabel = (name, required, description, typeHint) =>
   <div className="schema-label">
     <span className="schema-name">
       {name->React.string}
       {required ? <span className="required-mark"> {"*"->React.string} </span> : React.null}
+      {switch typeHint {
+      | Some(hint) => <span className="schema-type"> {hint->React.string} </span>
+      | None => React.null
+      }}
     </span>
     {switch description {
     | Some(description) => <span className="schema-desc"> {description->React.string} </span>
@@ -216,6 +220,85 @@ let stringifyValue = (value: JSON.t): string =>
   | Some(text) => text
   | None => value->JSON.stringify
   }
+
+// Short, subtle type hint rendered next to a field's name, e.g. `string`,
+// `integer[]`, `map<string, number>` or `Email | Phone`. Best-effort: shapes we
+// can't name get no hint, and recursion is depth-limited so a self-referential
+// schema (`$ref` cycles) can't loop forever.
+let rec typeHint = (schema: JSON.t, root: JSON.t, depth: int): option<string> =>
+  if depth > 6 {
+    None
+  } else {
+    let resolved = effective(schema, root, depth)
+    let base = switch enumOf(resolved) {
+    | Some(values) if Array.length(values) > 0 => Some("enum")
+    | _ =>
+      switch Schema.constOf(resolved) {
+      | Some(_) => Some("const")
+      | None =>
+        switch Schema.variantsOf(resolved) {
+        | Some(branches) =>
+          Some(
+            branches
+            ->Array.mapWithIndex((branch, _) => {
+              let effectiveBranch = effective(branch, root, depth + 1)
+              switch Schema.titleOf(effectiveBranch) {
+              | Some(title) => title
+              | None => typeHint(effectiveBranch, root, depth + 1)->Option.getOr("any")
+              }
+            })
+            ->Array.join(" | "),
+          )
+        | None =>
+          switch Schema.primaryType(resolved) {
+          | Some("object") =>
+            switch Schema.propertiesOf(resolved) {
+            | Some(_) => Some("object")
+            | None => mapHint(resolved, root, depth)
+            }
+          | Some("array") =>
+            switch Schema.tupleItemsOf(resolved) {
+            | Some(items) =>
+              Some(
+                "["
+                ++ items
+                ->Array.map(item => typeHint(item, root, depth + 1)->Option.getOr("any"))
+                ->Array.join(", ")
+                ++ "]",
+              )
+            | None =>
+              switch Schema.itemSchemaOf(resolved) {
+              | Some(item) =>
+                Some((typeHint(item, root, depth + 1)->Option.getOr("any")) ++ "[]")
+              | None => Some("array")
+              }
+            }
+          | Some(type_) => Some(type_)
+          | None =>
+            switch Schema.propertiesOf(resolved) {
+            | Some(_) => Some("object")
+            | None => mapHint(resolved, root, depth)
+            }
+          }
+        }
+      }
+    }
+    base->Option.map(label => Schema.isNullable(resolved) ? label ++ " | null" : label)
+  }
+and mapHint = (schema: JSON.t, root: JSON.t, depth: int): option<string> => {
+  let valueHint = valueSchema =>
+    Some("map<string, " ++ typeHint(valueSchema, root, depth + 1)->Option.getOr("any") ++ ">")
+  switch Schema.additionalPropertiesOf(schema) {
+  | Some(valueSchema) => valueHint(valueSchema)
+  | None =>
+    switch Schema.patternPropertiesOf(schema) {
+    | Some(patterns) if Array.length(patterns) > 0 =>
+      let (_, valueSchema) = Array.getUnsafe(patterns, 0)
+      valueHint(valueSchema)
+    | _ => None
+    }
+  }
+}
 
 let variantLabel = (discriminator: option<string>, branch: JSON.t, index: int): string =>
   switch Schema.titleOf(branch) {
@@ -355,7 +438,7 @@ and renderField = (
   }
 
   <div className={className} key={name}>
-    {fieldLabel(name, required, description)}
+    {fieldLabel(name, required, description, typeHint(resolved, root, 0))}
     {renderControl(
       ~resolved,
       ~current,

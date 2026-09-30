@@ -67,4 +67,36 @@ describe("SchemaForm", () => {
     expect(html).toContain("schema-array");
     expect(html).toContain("Add item");
   });
+
+  test("shows a subtle type hint next to each field name", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        count: { type: "integer" },
+        tags: { type: "array", items: { type: "string" } },
+        pair: { type: "array", prefixItems: [{ type: "string" }, { type: "boolean" }] },
+        labels: { type: "object", additionalProperties: { type: "number" } },
+        mode: { type: "string", enum: ["fast", "slow"] },
+        contact: {
+          oneOf: [
+            { title: "Email", type: "string" },
+            { title: "Phone", type: "string" },
+          ],
+        },
+        note: { type: ["string", "null"] },
+        settings: { type: "object", properties: { retries: { type: "integer" } } },
+      },
+    };
+    const html = render(schema, {});
+    expect(html).toContain('class="schema-type">string</span>');
+    expect(html).toContain('class="schema-type">integer</span>');
+    expect(html).toContain('class="schema-type">string[]</span>');
+    expect(html).toContain('class="schema-type">[string, boolean]</span>');
+    expect(html).toContain('class="schema-type">map&lt;string, number&gt;</span>');
+    expect(html).toContain('class="schema-type">enum</span>');
+    expect(html).toContain('class="schema-type">Email | Phone</span>');
+    expect(html).toContain('class="schema-type">string | null</span>');
+    expect(html).toContain('class="schema-type">object</span>');
+  });
 });

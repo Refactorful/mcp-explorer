@@ -752,6 +752,12 @@ body {
   font-size: 13px;
 }
 
+.schema-type {
+  color: var(--fg-muted);
+  font-size: 11px;
+  margin-left: 6px;
+}
+
 .required-mark {
   color: var(--danger);
   margin-left: 4px;
