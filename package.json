@@ -1,6 +1,6 @@
 {
   "name": "@refactorful/mcp-explorer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "Offline single-page debugger for any MCP server",
   "license": "MIT",

@@ -2,11 +2,13 @@
   <img src="assets/icon-compass.svg" alt="MCP Explorer" width="96" />
 </p>
 
-# MCP Explorer
+<h1 align="center">MCP Explorer</h1>
 
-[![npm version](https://img.shields.io/npm/v/@refactorful/mcp-explorer.svg)](https://www.npmjs.com/package/@refactorful/mcp-explorer)
-[![license](https://img.shields.io/npm/l/@refactorful/mcp-explorer.svg)](LICENSE)
-[![publish workflow](https://github.com/Refactorful/mcp-explorer/actions/workflows/publish.yml/badge.svg)](https://github.com/Refactorful/mcp-explorer/actions/workflows/publish.yml)
+<p align="center">
+  <a href="https://www.npmjs.com/package/@refactorful/mcp-explorer"><img src="https://img.shields.io/npm/v/@refactorful/mcp-explorer.svg" alt="npm version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/npm/l/@refactorful/mcp-explorer.svg" alt="license" /></a>
+  <a href="https://github.com/Refactorful/mcp-explorer/actions/workflows/publish.yml"><img src="https://github.com/Refactorful/mcp-explorer/actions/workflows/publish.yml/badge.svg" alt="publish workflow" /></a>
+</p>
 
 An offline single-page debugger for any
 [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server.
@@ -16,6 +18,8 @@ JSON-RPC message live so you can see exactly what the server sent back.
 
 Written in **ReScript + React**. No backend and no host dependency: you pass
 the MCP endpoint in when you mount it.
+
+![MCP Explorer running the greet tool: filled Try it form, the result "Hello, Nate!", and the JSON-RPC message log](docs/tool-demo.png)
 
 ## Features
 

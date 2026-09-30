@@ -7,8 +7,8 @@ let make = (
   ~loading: bool,
 ) =>
   <div className="config-bar">
+    <span> {"MCP Endpoint"->React.string} </span>
     <label className="field grow">
-      <span> {"MCP endpoint"->React.string} </span>
       <input
         className="text-input"
         value=endpoint

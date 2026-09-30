@@ -114,6 +114,18 @@ body {
   align-items: flex-end;
 }
 
+.config-bar > span {
+  align-self: center;
+}
+
+.config-bar .field.grow {
+  min-width: 160px;
+}
+
+.config-bar .text-input {
+  max-width: 240px;
+}
+
 .field {
   display: flex;
   flex-direction: column;
